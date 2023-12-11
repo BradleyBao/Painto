@@ -1,33 +1,45 @@
 import sys
 import typing
-from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPen, QPainter, QTabletEvent
 from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint
 from create_pen import create_pen_svg, create_using_pen_svg
 from OpenGL.GL import glLineWidth, glEnable, GL_LINE_SMOOTH, GL_BLEND, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, glLoadIdentity, glOrtho, glBlendFunc
 
 class ScribbleObject:
-    def __init__(self, path=[], color=QColor(255, 255, 255), thickness=3):
+    def __init__(self, path=[], color=QColor(255, 255, 255), thickness=3, thickness_path = []):
         self.path = path
         self.color = color
         self.thickness = thickness
+        self.thickness_path = thickness_path
 
     def drawObject(self, painter):
         if len(self.path) < 2:
             return
 
-        painter.setPen(QPen(self.color, self.thickness, Qt.SolidLine))
+        # painter.setPen(QPen(self.color, self.thickness, Qt.SolidLine))
 
         for i in range(len(self.path) - 1):
             p1 = self.path[i]
             p2 = self.path[i + 1]
+            # print(self.thickness_path)
+            width = self.thickness_path[i]
+
+            # print(len(self.path), len(self.thickness_path))
+
+            # print(len(self.path), len(self.thickness_path))
+            painter.setPen(QPen(self.color, width, Qt.SolidLine))
+
             painter.drawLine(p1, p2)
 
 
 class ScribbleWidget(QOpenGLWidget):
+
+    __DEFAULT_PEN_WIDTH = 3
+
     _PenColor = QColor("#000000")
     _eraser_mode = False
-    _pen_width = 3
+    _pen_width = __DEFAULT_PEN_WIDTH
     _pressure_pen = False
 
     def __init__(self, parent=None):
@@ -45,6 +57,11 @@ class ScribbleWidget(QOpenGLWidget):
 
     def delete_all(self, status: bool):
         self.objects = []
+        self.update()
+
+    def change_pen_thickness_func(self, num:int):
+        self.__DEFAULT_PEN_WIDTH = num
+        self._pen_width = self.__DEFAULT_PEN_WIDTH
         self.update()
 
     def initializeGL(self):
@@ -69,20 +86,24 @@ class ScribbleWidget(QOpenGLWidget):
 
     def tabletEvent(self, event: QTabletEvent):
         pressure = event.pressure()
-        self._pen_width = int(pressure + 5)
+        # self._pen_width = int(pressure * 10)
+        self._pen_width = int(pressure * 5) + self.__DEFAULT_PEN_WIDTH
+        # print(self._pen_width)
 
         self._pressure_pen = True
 
         if not self._eraser_mode:
             if event.type() == event.TabletPress:
-                self.current_object = ScribbleObject([event.pos()], self._PenColor, self._pen_width)
+                self.current_object = ScribbleObject([event.pos()], self._PenColor, self._pen_width, [self._pen_width])
             elif event.type() == event.TabletMove and self.current_object:
                 self.current_object.path.append(event.pos())
+                self.current_object.thickness_path.append(self._pen_width)
                 self.update()
             elif event.type() == event.TabletRelease and self.current_object:
                 self.objects.append(self.current_object)
                 self.current_object = None
                 self._pressure_pen = False
+                self._pen_width = self.__DEFAULT_PEN_WIDTH
                 self.update()
 
 
@@ -93,7 +114,7 @@ class ScribbleWidget(QOpenGLWidget):
 
         elif not self._pressure_pen:
             if event.button() == Qt.LeftButton:
-                self.current_object = ScribbleObject([event.pos()], self._PenColor, self._pen_width)
+                self.current_object = ScribbleObject([event.pos()], self._PenColor, self._pen_width, [self._pen_width])
 
     def mouseMoveEvent(self, event):
         if self._eraser_mode and event.buttons() == Qt.LeftButton:
@@ -102,6 +123,7 @@ class ScribbleWidget(QOpenGLWidget):
         elif not self._pressure_pen:
             if event.buttons() == Qt.LeftButton and self.current_object:
                 self.current_object.path.append(event.pos())
+                self.current_object.thickness_path.append(self._pen_width)
                 self.update()
 
     def mouseReleaseEvent(self, event):
@@ -225,6 +247,7 @@ class TransparentWindow(QMainWindow):
         self.child_window._switch_signal.connect(self.switch_status_of_window)
         self.child_window._switch_color.connect(self.ScribbleWidget.changeColor)
         self.child_window._eraser_mode.connect(self.ScribbleWidget.eraser_mode)
+        self.child_window._change_thickness_signal.connect(self.ScribbleWidget.change_pen_thickness_func)
         self.child_window._delete_all_signal.connect(self.ScribbleWidget.delete_all)
         self.child_window.show()
 
@@ -254,6 +277,7 @@ class MyToolbarApp(QMainWindow):
     _switch_color = pyqtSignal(str)
     _eraser_mode = pyqtSignal(bool)
     _delete_all_signal = pyqtSignal(bool)
+    _change_thickness_signal = pyqtSignal(int)
 
     __switch_status = True  # On by Default by which False status will be sent to turn it off
 
@@ -313,6 +337,10 @@ class MyToolbarApp(QMainWindow):
         # self.delete_all.
         self.toolbar.addAction(self.delete_all)
 
+        self.change_thickness_action = QAction(QIcon(f"sources/thickness.png"), "Change Pen's thickness", self)
+        self.change_thickness_action.triggered.connect(self.change_thickness)
+        self.toolbar.addAction(self.change_thickness_action)
+
         self.create_toolbar_actions()
 
         
@@ -320,6 +348,33 @@ class MyToolbarApp(QMainWindow):
         add_widget_action = QAction(QIcon("sources/add.png"), "Add Pens", self)
         add_widget_action.triggered.connect(self.add_widgets_to_toolbar)
         self.toolbar.addAction(add_widget_action)
+
+    def change_thickness(self):
+        force_switch = False
+        if self.__switch_status:
+            self.switch_to_desktop_or_window()
+            force_switch = True
+        
+        items = ['1px', '3px', '5px', '7px', '9px']
+        selected_items, ok = QInputDialog.getItem(self, 'Select Thicknesses', 'Choose at least three items:', items, 1, False)
+        if ok:
+            if selected_items == "1px":
+                self._change_thickness_signal.emit(1)
+
+            elif selected_items == "3px":
+                self._change_thickness_signal.emit(3)
+
+            elif selected_items == "5px":
+                self._change_thickness_signal.emit(5)
+
+            elif selected_items == "7px":
+                self._change_thickness_signal.emit(7)
+
+            else:
+                self._change_thickness_signal.emit(9)
+
+        if force_switch:
+            self.switch_to_desktop_or_window()
 
     def delete_allInks(self):
         self._delete_all_signal.emit(True)
@@ -413,7 +468,7 @@ class MyToolbarApp(QMainWindow):
             create_pen_svg(color, index)
             create_using_pen_svg(color, index)
             
-            new_widget = QAction(QIcon(f"sources/pen_{index}.svg"), "Add Widget", self)
+            new_widget = QAction(QIcon(f"sources/pen_{index}.svg"), f"Pen {index}", self)
             new_widget.triggered.connect(lambda _, value=color, index = index, action = new_widget: self.pen_trigger(value, index, action))
             self.toolbar.insertAction(self.toolbar.actions()[-1], new_widget)
             self.__PEN_ACTIONS.append(new_widget)
