@@ -1,4 +1,4 @@
-import sys
+import sys, json, os
 import typing
 from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPen, QPainter, QTabletEvent
@@ -205,7 +205,7 @@ class TransparentWindow(QMainWindow):
         # Set the window to be transparent
         self.setWindowFlags(self.windowFlags() | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         # self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.WindowTransparentForInput)
-        # todo Set the window to Control Mode
+        # Set the window to Control Mode
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         # self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_PaintOnScreen, True)
@@ -213,7 +213,7 @@ class TransparentWindow(QMainWindow):
         self.showFullScreen() 
         # self.setStyleSheet('background-color:transparent')
 
-        # todo Set the Window to Drawing Mode
+        # Set the Window to Drawing Mode
 
         # central_widget = QWidget(self)
         self.installEventFilter(self)
@@ -222,6 +222,9 @@ class TransparentWindow(QMainWindow):
         # self.ScribbleWidget._close_signal.connect(self.reopen_canva)
 
         self.setCentralWidget(self.ScribbleWidget)
+
+        # Data Saved 
+
 
     # def reopen_canva(self, path, color):
     #     self.ScribbleWidget = ScribbleWidget(path = path, color = color, regraph=True)
@@ -287,12 +290,52 @@ class MyToolbarApp(QMainWindow):
 
     _last_index = 0
 
+    __user_profile_path = "" 
+
+    __current_selected_pen_action:QAction = None
+    __current_selected_pen_action_index:int = 0
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.initUI()
+        self.init_user_profile()
+        self.initUI() 
+
+    def init_user_profile(self):
+        user_profile_name = "user.json" 
+        self.__user_profile_path = os.path.realpath(user_profile_name) 
+
+        if os.path.exists(self.__user_profile_path):
+            with open(self.__user_profile_path, 'r') as json_file:
+                data = json.load(json_file)
+
+            self.__LIST_OF_PEN = data
+            # return True
+        else:
+            self.__LIST_OF_PEN = {
+                "Pen 1" : "#000000",
+                "Pen 2" : "#d81324",
+                "Pen 3" : "#015fab",
+            }
+
+            self.save_pen_data(self.__user_profile_path)
+        # return False
+            
+    def save_pen_data(self, path):
+        with open(path, 'w') as json_file:
+            json.dump(self.__LIST_OF_PEN, json_file)
+
+    def rearrange_dict_saved(self): 
+        new_dict = {} 
+        counter = 1 
+        for key, value in self.__LIST_OF_PEN.items():
+            new_key = "Pen " + str(counter)
+            new_dict[new_key] = value
+            counter += 1 
+
+        self.__LIST_OF_PEN = new_dict 
 
     def initUI(self):
-        self.setWindowTitle("ScreenPrompt")
+        self.setWindowTitle("Painto")
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         self.setGeometry(50, 50, 800, 50)
         self.setFixedSize(800, 60)
@@ -307,7 +350,7 @@ class MyToolbarApp(QMainWindow):
         # layout.addWidget(self.status_label)
 
         # Create a vertical toolbar
-        self.toolbar = QToolBar("My Vertical Toolbar", self)
+        self.toolbar = QToolBar("ToolBar", self)
         self.toolbar.setOrientation(Qt.Vertical)
         self.toolbar.setStyleSheet("QToolBar { border: 0px; }")
         self.addToolBar(self.toolbar)
@@ -317,11 +360,11 @@ class MyToolbarApp(QMainWindow):
         self.toolbar.setIconSize(QPixmap(icon_size, icon_size).size())
 
 
-        self.__LIST_OF_PEN = {
-            "Pen 1" : "#000000",
-            "Pen 2" : "#d81324",
-            "Pen 3" : "#015fab",
-        }
+        # self.__LIST_OF_PEN = {
+        #     "Pen 1" : "#000000",
+        #     "Pen 2" : "#d81324",
+        #     "Pen 3" : "#015fab",
+        # }
 
         # Create Switch Button 
         self.switch_btn_action = QAction(QIcon(f"sources/switch_trigger.png"), "Switch to Desktop / Window", self)
@@ -347,7 +390,29 @@ class MyToolbarApp(QMainWindow):
         # Create a QAction for adding widgets to the toolbar
         add_widget_action = QAction(QIcon("sources/add.png"), "Add Pens", self)
         add_widget_action.triggered.connect(self.add_widgets_to_toolbar)
-        self.toolbar.addAction(add_widget_action)
+        self.toolbar.addAction(add_widget_action) 
+
+        self.addToolBarBreak()
+
+        # Pen Toolbar 
+        self.pen_toolbar = QToolBar("Pen's Toolbar") 
+        self.pen_toolbar.setIconSize(QPixmap(icon_size, icon_size).size())
+        self.addToolBar(self.pen_toolbar) 
+
+        self.delete_current_pen = QAction(QIcon("sources/delete_pen.png"), "Delete Pens", self)
+        self.delete_current_pen.triggered.connect(self.delete_current_pen_func)
+        self.pen_toolbar.addAction(self.delete_current_pen) 
+
+        self.pen_toolbar.hide() 
+
+    def delete_current_pen_func(self): 
+        # self.__current_selected_pen_action.deleteLater() 
+        self.toolbar.removeAction(self.__current_selected_pen_action) 
+        name_to_delete = "Pen " + str(self.__current_selected_pen_action_index) 
+        self.__LIST_OF_PEN.pop(name_to_delete)
+
+        self.pen_toolbar.hide() 
+        self.setFixedSize(800, 60) 
 
     def change_thickness(self):
         force_switch = False
@@ -402,14 +467,19 @@ class MyToolbarApp(QMainWindow):
             action.triggered.connect(lambda _, value=action_value, index = index, action = action: self.pen_trigger(value, index, action))
             self.toolbar.addAction(action)
             self.__PEN_ACTIONS.append(action)
-            create_pen_svg(self.__LIST_OF_PEN[f"Pen {index}"], index)
-            create_using_pen_svg(self.__LIST_OF_PEN[f"Pen {index}"], index)
+            create_pen_svg(self.__LIST_OF_PEN[action_text], index)
+            create_using_pen_svg(self.__LIST_OF_PEN[action_text], index)
             index += 1
 
         self._last_index = index
 
     def pen_trigger(self, color, index, action):
-        
+        # Change window size for function of pens. 
+        self.__current_selected_pen_action = action
+        self.__current_selected_pen_action_index = index
+        self.setFixedSize(800, 120)
+        self.pen_toolbar.show() 
+
         self._eraser_mode.emit(False)
         self.eraser.setIcon(QIcon("sources/eraser.png"))
         self._switch_color.emit(color)
@@ -460,7 +530,8 @@ class MyToolbarApp(QMainWindow):
 
     def add_widgets_to_toolbar(self):
         # Create and add widgets to the toolbar
-        index = len(self.__LIST_OF_PEN) + 1
+        index = self._last_index
+        self._last_index += 1
         
         color = self.pick_new_color()
 
@@ -478,6 +549,10 @@ class MyToolbarApp(QMainWindow):
     def closeEvent(self, event):
         self.parent().close()
         super().closeEvent(event)
+
+        self.rearrange_dict_saved() 
+        self.save_pen_data(self.__user_profile_path) 
+        
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
