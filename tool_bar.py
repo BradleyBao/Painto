@@ -2,9 +2,10 @@ import sys, json, os
 import typing
 from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPen, QPainter, QTabletEvent
-from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint
+from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint, pyqtSlot
 from create_pen import create_pen_svg, create_using_pen_svg
 from OpenGL.GL import glLineWidth, glEnable, GL_LINE_SMOOTH, GL_BLEND, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, glLoadIdentity, glOrtho, glBlendFunc
+import qdarktheme 
 
 class ScribbleObject:
     def __init__(self, path=[], color=QColor(255, 255, 255), thickness=3, thickness_path = []):
@@ -352,7 +353,8 @@ class MyToolbarApp(QMainWindow):
         # Create a vertical toolbar
         self.toolbar = QToolBar("ToolBar", self)
         self.toolbar.setOrientation(Qt.Vertical)
-        self.toolbar.setStyleSheet("QToolBar { border: 0px; }")
+        self.toolbar.setStyleSheet("QToolBar { border: 0px; }") 
+        self.toolbar.setMovable(False)
         self.addToolBar(self.toolbar)
 
         # Set a custom icon size (e.g., 64x64 pixels)
@@ -396,7 +398,8 @@ class MyToolbarApp(QMainWindow):
 
         # Pen Toolbar 
         self.pen_toolbar = QToolBar("Pen's Toolbar") 
-        self.pen_toolbar.setIconSize(QPixmap(icon_size, icon_size).size())
+        self.pen_toolbar.setIconSize(QPixmap(icon_size, icon_size).size()) 
+        self.pen_toolbar.setMovable(False)
         self.addToolBar(self.pen_toolbar) 
 
         self.delete_current_pen = QAction(QIcon("sources/delete_pen.png"), "Delete Pens", self)
@@ -553,9 +556,13 @@ class MyToolbarApp(QMainWindow):
         self.rearrange_dict_saved() 
         self.save_pen_data(self.__user_profile_path) 
         
-
 if __name__ == '__main__':
+    qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
+
+    # PyQt5 Theme 
+    # Apply the complete dark theme to your Qt App.
+    qdarktheme.setup_theme("auto") 
 
     window = TransparentWindow()
     window.show()
