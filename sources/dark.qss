@@ -1,0 +1,12 @@
+QMainWindow {
+    background-color: rgb(32, 32, 32);
+}
+
+Widget > QLabel {
+    color: white;
+}
+
+CloseButton {
+    qproperty-normalColor: white;
+    qproperty-normalBackgroundColor: transparent;
+}
