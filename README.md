@@ -1,5 +1,6 @@
 # Painto
 A Python On-Screen Notation Software 
+UI based on [PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets)
 
 ## Tool Bar 
 ![image](https://github.com/BradleyBao/Painto/assets/80588549/63e9a151-4aee-4e5e-8d59-ac3bcfcf6eeb)
