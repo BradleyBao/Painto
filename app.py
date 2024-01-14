@@ -1,14 +1,16 @@
 import sys, json, os
 import typing
-from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog, QHBoxLayout
+from config import cfg
+from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog, QHBoxLayout, QDialog, QSystemTrayIcon, QMenu
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPen, QPainter, QTabletEvent
-from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint, pyqtSlot
+from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint, pyqtSlot, QSize, QTranslator
 
 # Fluent UI
 from qfluentwidgets import (FluentIcon, TransparentDropDownPushButton, RoundMenu, CommandBar, Action,
                             setTheme, Theme, setFont, CommandBarView, Flyout, FlyoutAnimationType,
-                            ImageLabel, ToolButton, PushButton, isDarkTheme, QConfig)
+                            ImageLabel, ToolButton, PushButton, isDarkTheme, QConfig, MSFluentWindow, FluentTranslator)
 from qframelesswindow import FramelessWindow, StandardTitleBar
+from setting_interface import SettingInterface
 
 from create_pen import create_pen_svg, create_using_pen_svg
 from OpenGL.GL import glLineWidth, glEnable, GL_LINE_SMOOTH, GL_BLEND, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, glLoadIdentity, glOrtho, glBlendFunc
@@ -281,6 +283,36 @@ class TransparentWindow(QMainWindow):
         super().closeEvent(event)
         self.child_window.close()
 
+class SettingUI(FramelessWindow):
+
+    _closeSetting:pyqtSignal = pyqtSignal() 
+    _themeChange:pyqtSignal = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.setTitleBar(StandardTitleBar(self))
+
+        self.hBoxLayout = QHBoxLayout(self)
+        self.settingInterface = SettingInterface(self)
+        self.hBoxLayout.setContentsMargins(0, 0, 0, 0)
+        self.hBoxLayout.addWidget(self.settingInterface)
+
+        # self.setWindowIcon(QIcon(":/qfluentwidgets/images/logo.png"))
+        # self.setWindowTitle("PyQt-Fluent-Widgets")
+
+        self.resize(1080, 784)
+        size = QApplication.screens()[0].size()
+        w, h = size.width(), size.height()
+        self.move(w//2 - self.width()//2, h//2 - self.height()//2)
+
+        self.titleBar.raise_() 
+
+    def closeEvent(self, event):
+        # self.parent().close()
+        # super().closeEvent(event)
+        self._closeSetting.emit() 
+        self.hide() 
+
 class MyToolbarApp(QMainWindow):
 
     _switch_signal = pyqtSignal(bool)
@@ -300,17 +332,63 @@ class MyToolbarApp(QMainWindow):
     __user_profile_path = "" 
 
     __current_selected_pen_action:QAction = None
-    __current_selected_pen_action_index:int = 0
+    __current_selected_pen_action_index:int = 0 
+    
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.init_user_profile()
         self.initUI() 
-        self.themeCard() 
+        self.themeCard()
 
-    
+    def openSetting(self): 
+        force_switch = False
+        if self.__switch_status:
+            self.switch_to_desktop_or_window()
+            force_switch = True
+            
+        
+        self.SettingUI.show() 
+        # todo Setting Interface Close Event
+        # todo Signal
+        self.switch_btn.setChecked(False)
+        self.__disableSystem(True)
+        
+
+        # if force_switch:
+        #     self.switch_to_desktop_or_window()
+        
+    def __disableSystem(self, status:bool):
+        
+        # self.switch_btn.setDisabled(status)
+        # self.eraser.setDisabled(status) 
+        # self.delete_all.setDisabled(status) 
+        # self.SettingAction.setDisabled(status) 
+        # self.add_widget_action.setDisabled(status) 
+        # self.remove_widget_action.setDisabled(status) 
+
+        for each_action in self.commandBar.actions(): 
+            each_action.setDisabled(status)
+
+    def setThemeToolBar(self, theme:Theme):
+        setTheme(theme) 
+        color = 'dark' if isDarkTheme() else 'light' 
+
+        if color == "light":
+            self.add_widget_action.setIcon(QIcon("sources/add.png")) 
+            self.remove_widget_action.setIcon(QIcon("sources/delete_pen.png")) 
+            self.change_thickness_action.setIcon(QIcon("sources/thickness.png")) 
+
+        elif color == "dark":
+            self.add_widget_action.setIcon(QIcon("sources/add_dark.png")) 
+            self.remove_widget_action.setIcon(QIcon("sources/delete_pen_dark.png")) 
+            self.change_thickness_action.setIcon(QIcon("sources/thickness_dark.png"))
+
+        with open(f'sources/{color}.qss', encoding='utf-8') as f:
+            self.setStyleSheet(f.read())
+
     def themeCard(self):
-        setTheme(Theme.AUTO)
+        setTheme(cfg.theme)
         color = 'dark' if isDarkTheme() else 'light' 
 
         if color == "dark":
@@ -339,6 +417,7 @@ class MyToolbarApp(QMainWindow):
             }
 
             self.save_pen_data(self.__user_profile_path)
+            
         # return False
             
     def save_pen_data(self, path):
@@ -355,14 +434,49 @@ class MyToolbarApp(QMainWindow):
 
         self.__LIST_OF_PEN = new_dict 
 
+    def c_tray(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        self.tray_icon.setIcon(QIcon('sources/logo.png'))
+        self.menu = QMenu(self)
+        self.action = QAction('Exit', self)
+        self.action.triggered.connect(self.tray_shutdown)
+        self.menu.addAction(self.action)
+        self.tray_icon.activated.connect(self.tray_activate)
+        self.tray_icon.setContextMenu(self.menu)
+        self.tray_icon.show() 
+        
+        self.tray_close = cfg.minimizeToTray.value 
+
+    def tray_shutdown(self):
+        self.parent().close()
+        self.SettingUI.close()
+
+        self.rearrange_dict_saved() 
+        self.save_pen_data(self.__user_profile_path) 
+
+        self.close() 
+        QApplication.quit() 
+
+    def tray_activate(self): 
+        self.tray_close = False
+        self.parent().show()
+        self.show() 
+        self.__disableSystem(False)
+        # self.tray_icon.hide() 
+
     def initUI(self):
         self.setWindowTitle("Painto")
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
-        self.setGeometry(50, 50, 800, 50)
+        self.setGeometry(50, 50, 800, 50) 
         # self.setFixedSize(800, 60)
         self.setWindowIcon(QIcon('sources/logo.png'))
 
-        self.myWidget = QWidget(self)
+        self.myWidget = QWidget(self) 
+
+        self.SettingUI = SettingUI() 
+        self.SettingUI._closeSetting.connect(self.settingCloseEvent) 
+        cfg.StrokeSize.valueChanged.connect(self.changeFontSize)
+        cfg.themeChanged.connect(self.setThemeToolBar)
         
         self.setCentralWidget(self.myWidget)
 
@@ -374,7 +488,7 @@ class MyToolbarApp(QMainWindow):
 
         self.commandBar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
-        self.switch_btn = Action(FluentIcon.EDIT, 'Edit', triggered=self.switch_to_desktop_or_window, checkable=True)
+        self.switch_btn = Action(FluentIcon.EDIT, 'Edit', triggered=self.switch_to_desktop_or_window, checkable=True) 
         self.commandBar.addAction(self.switch_btn)
         self.switch_btn.setChecked(True)
         self.commandBar.addSeparator() 
@@ -386,6 +500,11 @@ class MyToolbarApp(QMainWindow):
         self.commandBar.addAction(self.delete_all)
         
         self.create_change_thickness_button() 
+
+        # Create Setting
+        self.SettingAction = Action(FluentIcon.SETTING, 'Settings', shortcut='Ctrl+S') 
+        self.SettingAction.triggered.connect(self.openSetting)
+        self.commandBar.addHiddenAction(self.SettingAction) 
     
         
         # Create a QAction for adding widgets to the toolbar
@@ -401,10 +520,35 @@ class MyToolbarApp(QMainWindow):
         self.commandBar.addSeparator() 
 
         self.create_toolbar_actions() 
+        self.setApplicationFont()
+
+        self.c_tray()
+
+    def changeFontSize(self):
+        # self.setApplicationFont()
+        font = QApplication.font()
+        font.setPointSize(cfg.StrokeSize.value)
+        self.commandBar.setIconSize(QSize(cfg.StrokeSize.value + 7, cfg.StrokeSize.value + 7))
+        self.commandBar.setFont(font)
+        self.change_thickness_action.setFont(font)
+        self.change_thickness_action.setIconSize(QSize(cfg.StrokeSize.value, cfg.StrokeSize.value))
+
+    def setApplicationFont(self, size = cfg.StrokeSize.value):
+        font = QApplication.font()
+        font.setPointSize(size)
+        self.commandBar.setIconSize(QSize(size + 7, size + 7))
+        self.commandBar.setFont(font)
+
+    def settingCloseEvent(self):
+        self.__disableSystem(False)
 
     def create_change_thickness_button(self):
         self.change_thickness_action = TransparentDropDownPushButton(QIcon(f"sources/thickness.png"), "Thickness", self)
-        self.change_thickness_action.setFixedHeight(34)
+        # self.change_thickness_action.setFixedHeight(cfg.StrokeSize.value)
+        font = QApplication.font()
+        font.setPointSize(cfg.StrokeSize.value)
+        self.change_thickness_action.setFont(font)
+        self.change_thickness_action.setIconSize(QSize(cfg.StrokeSize.value, cfg.StrokeSize.value))
         # setFont(self.change_thickness_action, 12) 
         # self.change_thickness_action.triggered.connect(self.change_thickness)
 
@@ -549,12 +693,29 @@ class MyToolbarApp(QMainWindow):
             self.__LIST_OF_PEN[f"Pen {index}"] = color
 
     def closeEvent(self, event):
+
+        if cfg.minimizeToTray.value or self.tray_close:
+
+            if self.__switch_status:
+                self.switch_to_desktop_or_window()
+
+            self.parent().hide()
+            self.hide() 
+            
+            self.SettingUI.hide() 
+            # self.tray_icon.show()
+            event.ignore() 
+            return
+
         self.parent().close()
+        self.SettingUI.close()
         super().closeEvent(event)
 
+        
         self.rearrange_dict_saved() 
         self.save_pen_data(self.__user_profile_path) 
-        
+
+
 if __name__ == '__main__':
     # qdarktheme.enable_hi_dpi()
     app = QApplication(sys.argv)
@@ -563,7 +724,15 @@ if __name__ == '__main__':
     # Apply the complete dark theme to your Qt App.
     # qdarktheme.setup_theme("auto") 
 
+    # locale = cfg.get(cfg.language).value
+    # fluentTranslator = FluentTranslator(locale)
+    # settingTranslator = QTranslator()
+    # settingTranslator.load(locale, "PixelOnScreen", ".", "sources/lans")
+
+    # app.installTranslator(fluentTranslator)
+    # app.installTranslator(settingTranslator)
+
     window = TransparentWindow()
-    window.show()
+    window.show() 
     
     sys.exit(app.exec_())
