@@ -3,7 +3,7 @@ import typing
 from config import cfg
 from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QWidget, QColorDialog, QOpenGLWidget, QInputDialog, QHBoxLayout, QDialog, QSystemTrayIcon, QMenu
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QPen, QPainter, QTabletEvent
-from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint, pyqtSlot, QSize, QTranslator
+from PyQt5.QtCore import QEvent, QObject, Qt, pyqtSignal, QPoint, pyqtSlot, QSize, QTranslator, QLockFile, QDir
 
 # Fluent UI
 from qfluentwidgets import (FluentIcon, TransparentDropDownPushButton, RoundMenu, CommandBar, Action,
@@ -509,7 +509,6 @@ class MyToolbarApp(QMainWindow):
         
         # Create a QAction for adding widgets to the toolbar
         self.add_widget_action = Action(QIcon("sources/add.png"), "Add Pens", self) 
-        
         self.add_widget_action.triggered.connect(self.add_widgets_to_toolbar)
         self.commandBar.addAction(self.add_widget_action) 
 
@@ -623,6 +622,8 @@ class MyToolbarApp(QMainWindow):
         self.__current_selected_pen_action_index = index
         # self.pen_toolbar.show() 
 
+        self.switch_btn.setChecked(True)
+
         self._eraser_mode.emit(False)
         self.eraser.setIcon(QIcon("sources/eraser.png"))
         self._switch_color.emit(color)
@@ -692,6 +693,9 @@ class MyToolbarApp(QMainWindow):
 
             self.__LIST_OF_PEN[f"Pen {index}"] = color
 
+            new_widget.trigger() 
+            self.switch_btn.setChecked(True)
+
     def closeEvent(self, event):
 
         if cfg.minimizeToTray.value or self.tray_close:
@@ -718,21 +722,26 @@ class MyToolbarApp(QMainWindow):
 
 if __name__ == '__main__':
     # qdarktheme.enable_hi_dpi()
-    app = QApplication(sys.argv)
 
-    # PyQt5 Theme 
-    # Apply the complete dark theme to your Qt App.
-    # qdarktheme.setup_theme("auto") 
+    lockfile = QLockFile(QDir.tempPath() + "/painto.lock") 
 
-    # locale = cfg.get(cfg.language).value
-    # fluentTranslator = FluentTranslator(locale)
-    # settingTranslator = QTranslator()
-    # settingTranslator.load(locale, "PixelOnScreen", ".", "sources/lans")
+    if lockfile.tryLock(100):
 
-    # app.installTranslator(fluentTranslator)
-    # app.installTranslator(settingTranslator)
+        app = QApplication(sys.argv)
 
-    window = TransparentWindow()
-    window.show() 
+        # PyQt5 Theme 
+        # Apply the complete dark theme to your Qt App.
+        # qdarktheme.setup_theme("auto") 
+
+        # locale = cfg.get(cfg.language).value
+        # fluentTranslator = FluentTranslator(locale)
+        # settingTranslator = QTranslator()
+        # settingTranslator.load(locale, "PixelOnScreen", ".", "sources/lans")
+
+        # app.installTranslator(fluentTranslator)
+        # app.installTranslator(settingTranslator)
+
+        window = TransparentWindow()
+        window.show() 
     
-    sys.exit(app.exec_())
+        sys.exit(app.exec_())
