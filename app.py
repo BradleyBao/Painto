@@ -350,8 +350,6 @@ class MyToolbarApp(QMainWindow):
             
         
         self.SettingUI.show() 
-        # todo Setting Interface Close Event
-        # todo Signal
         self.switch_btn.setChecked(False)
         self.__disableSystem(True)
         
@@ -476,7 +474,8 @@ class MyToolbarApp(QMainWindow):
 
         self.SettingUI = SettingUI() 
         self.SettingUI._closeSetting.connect(self.settingCloseEvent) 
-        cfg.StrokeSize.valueChanged.connect(self.changeFontSize)
+        cfg.dpiScale.valueChanged.connect(self.changeFontSize)
+        cfg.StrokeSize.valueChanged.connect(lambda thickness: self.change_thickness(thickness))
         cfg.themeChanged.connect(self.setThemeToolBar)
         
         self.setCentralWidget(self.myWidget)
@@ -520,24 +519,45 @@ class MyToolbarApp(QMainWindow):
         self.commandBar.addSeparator() 
 
         self.create_toolbar_actions() 
-        self.setApplicationFont()
+
+        if isinstance(cfg.dpiScale.value, str):
+            size = 10
+
+        else:
+            size = int(cfg.dpiScale.value * 10)
+
+        self.setApplicationFont(size = size)
 
         self.c_tray()
 
     def changeFontSize(self):
         # self.setApplicationFont()
         font = QApplication.font()
-        font.setPointSize(cfg.StrokeSize.value)
-        self.commandBar.setIconSize(QSize(cfg.StrokeSize.value + 7, cfg.StrokeSize.value + 7))
-        self.commandBar.setFont(font)
-        self.change_thickness_action.setFont(font)
-        self.change_thickness_action.setIconSize(QSize(cfg.StrokeSize.value, cfg.StrokeSize.value))
 
-    def setApplicationFont(self, size = cfg.StrokeSize.value):
+        if isinstance(cfg.dpiScale.value, str):
+            font_size = 10
+
+        else:
+            font_size = int(cfg.dpiScale.value*10)
+
+        font.setPointSize(font_size)
+        self.commandBar.setIconSize(QSize(font_size + 7, font_size + 7))
+        self.commandBar.setFont(font) 
+        self.change_thickness_action.setFont(font)
+        self.change_thickness_action.setIconSize(QSize(font_size, font_size)) 
+
+        # for each_action in self.commandBar.commandButtons:
+        #     each_action.setMinimumWidth(int(font_size * 5 - 10)) 
+
+        # self.commandBar.suitableWidth() 
+
+    def setApplicationFont(self, size):
         font = QApplication.font()
         font.setPointSize(size)
         self.commandBar.setIconSize(QSize(size + 7, size + 7))
         self.commandBar.setFont(font)
+        self.change_thickness_action.setFont(font)
+        self.change_thickness_action.setIconSize(QSize(size, size))
 
     def settingCloseEvent(self):
         self.__disableSystem(False)
@@ -583,6 +603,7 @@ class MyToolbarApp(QMainWindow):
             force_switch = True
             
         self._change_thickness_signal.emit(thickness)
+        self.change_thickness_action.setText(f"{thickness}px")
 
         if force_switch:
             self.switch_to_desktop_or_window()
