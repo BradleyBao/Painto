@@ -291,7 +291,8 @@ class SettingUI(FramelessWindow):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setTitleBar(StandardTitleBar(self))
-
+        self.setWindowTitle("Painto Setting") 
+        self.setWindowIcon(QIcon('sources/pen_setting.png')) 
         self.hBoxLayout = QHBoxLayout(self)
         self.settingInterface = SettingInterface(self)
         self.hBoxLayout.setContentsMargins(0, 0, 0, 0)
@@ -624,7 +625,8 @@ class MyToolbarApp(QMainWindow):
 
         self.switch_btn.setChecked(True)
 
-        self._eraser_mode.emit(False)
+        self._eraser_mode.emit(False) 
+        self.eraser.setChecked(False) 
         self.eraser.setIcon(QIcon("sources/eraser.png"))
         self._switch_color.emit(color)
         self.restore_all_other_pens()
