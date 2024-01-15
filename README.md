@@ -1,6 +1,9 @@
 # Painto 
 <div>
-  <img src="https://img.shields.io/github/v/tag/BradleyBao/Painto?label=ver&style=for-the-badge">
+  <a href="https://github.com/BradleyBao/Painto/releases/latest">
+    <img src="https://img.shields.io/github/v/tag/BradleyBao/Painto?label=ver&style=for-the-badge">
+  </a>
+  
 </div>
 A Python On-Screen Notation Software 
 UI based on [PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets) 
