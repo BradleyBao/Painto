@@ -322,6 +322,7 @@ class MyToolbarApp(QMainWindow):
     _delete_all_signal = pyqtSignal(bool)
     _change_thickness_signal = pyqtSignal(int)
 
+    _erase_mode_status = False
     __switch_status = True  # On by Default by which False status will be sent to turn it off
 
     __LIST_OF_PEN:dict = {}
@@ -612,9 +613,11 @@ class MyToolbarApp(QMainWindow):
         self._delete_all_signal.emit(True)
 
     def use_eraser(self):
-        self._eraser_mode.emit(True)
+        self._eraser_mode.emit(True) if not self._erase_mode_status else self._eraser_mode.emit(False) 
+        self._erase_mode_status = not self._erase_mode_status
         self.eraser.setIcon(QIcon("sources/eraser_using.png"))
         if not self.__switch_status:
+            self.switch_btn.setChecked(True)
             self.switch_to_desktop_or_window()
 
     def switch_to_desktop_or_window(self):
