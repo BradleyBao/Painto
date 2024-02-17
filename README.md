@@ -46,4 +46,4 @@ Here are some related projects:
 
 ## License
 
-The project is under [MIT](https://choosealicense.com/licenses/mit/) license. 
+The project is under [MIT](https://github.com/BradleyBao/Painto/blob/main/LICENSE) license. 
