@@ -9,7 +9,7 @@ from qfluentwidgets import FluentIcon as FIF
 from PyQt5.QtCore import Qt, pyqtSignal, QUrl, QStandardPaths
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QWidget, QLabel, QFontDialog, QFileDialog
-
+import os
 
 class SettingInterface(ScrollArea):
     """ Setting interface """
@@ -20,9 +20,11 @@ class SettingInterface(ScrollArea):
     minimizeToTrayChanged = pyqtSignal(bool) 
     themeChanged = pyqtSignal(str) 
     # strokeSizeChanged = pyqtSignal(int)
+    __user_sources_path = os.path.dirname(os.path.realpath(__file__)) + "\sources"
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        
         self.scrollWidget = QWidget()
         self.expandLayout = ExpandLayout(self.scrollWidget)
 
@@ -55,6 +57,17 @@ class SettingInterface(ScrollArea):
             self.tr('Language'),
             self.tr('Set your preferred language for UI'),
             texts=['简体中文', '繁體中文', 'English', self.tr('Use system setting')],
+            parent=self.personalGroup
+        ) 
+        self.zoomCard = OptionsSettingCard(
+            cfg.dpiScale,
+            FIF.ZOOM,
+            self.tr("Interface zoom"),
+            self.tr("Change the size of widgets and fonts"),
+            texts=[
+                "100%", "125%", "150%", "175%", "200%",
+                self.tr("Use system setting")
+            ],
             parent=self.personalGroup
         )
 
@@ -96,14 +109,14 @@ class SettingInterface(ScrollArea):
             self.tr('Open help page'),
             FIF.HELP,
             self.tr('Help'),
-            self.tr('Discover new features and learn useful tips about PyQt-Fluent-Widgets'),
+            self.tr('Post any inquiry about Painto'),
             self.aboutGroup
         )
         self.feedbackCard = PrimaryPushSettingCard(
             self.tr('Provide feedback'),
             FIF.FEEDBACK,
             self.tr('Provide feedback'),
-            self.tr('Help us improve PyQt-Fluent-Widgets by providing feedback'),
+            self.tr('Help us improve'),
             self.aboutGroup
         )
         self.aboutCard = PrimaryPushSettingCard(
@@ -139,6 +152,8 @@ class SettingInterface(ScrollArea):
         self.personalGroup.addSettingCard(self.themeCard)
         self.personalGroup.addSettingCard(self.themeColorCard)
         self.personalGroup.addSettingCard(self.languageCard)
+        self.personalGroup.addSettingCard(self.zoomCard)
+
 
         # Pen Colors
         self.penGroup.addSettingCard(self.StrokeSizeCard)
@@ -166,7 +181,7 @@ class SettingInterface(ScrollArea):
         self.settingLabel.setObjectName('settingLabel')
 
         theme = 'dark' if isDarkTheme() else 'light'
-        with open(f'sources/setting_interface_{theme}.qss', encoding='utf-8') as f:
+        with open(os.path.join(self.__user_sources_path, f"setting_interface_{theme}.qss"), encoding='utf-8') as f:
             self.setStyleSheet(f.read()) 
 
         self.themeChanged.emit(theme)

@@ -6,7 +6,7 @@ from PyQt5.QtGui import QGuiApplication, QFont
 from qfluentwidgets import (qconfig, QConfig, ConfigItem, OptionsConfigItem, BoolValidator,
                             ColorConfigItem, OptionsValidator, RangeConfigItem, RangeValidator,
                             FolderListValidator, EnumSerializer, FolderValidator, ConfigSerializer, __version__)
-
+import os
 
 
 class Language(Enum):
@@ -70,11 +70,11 @@ class Config(QConfig):
 
 YEAR = 2024
 AUTHOR = "tianyibrad"
-VERSION = "0.4.1"
+VERSION = "0.5.1"
 HELP_URL = "https://github.com/BradleyBao/Painto/issues"
 FEEDBACK_URL = "https://github.com/BradleyBao/Painto/issues"
 RELEASE_URL = "https://github.com/BradleyBao/Painto/releases/latest"
 
-
+user_profile_path = os.path.dirname(os.path.realpath(__file__)) + "\config"
 cfg = Config()
-qconfig.load('config/config.json', cfg)
+qconfig.load(f'{user_profile_path}/config.json', cfg)
