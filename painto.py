@@ -333,8 +333,11 @@ class MyToolbarApp(QMainWindow):
 
     _last_index = 0
 
-    __user_profile_path = os.path.dirname(os.path.realpath(__file__)) + "\config"
-    __user_sources_path = os.path.dirname(os.path.realpath(__file__)) + "\sources"
+    # __user_profile_path = os.path.dirname(os.path.realpath(__file__)) + "\config"
+    __user_profile_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "config")
+
+    # __user_sources_path = os.path.dirname(os.path.realpath(__file__)) + "\sources"
+    __user_sources_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sources")
 
     __current_selected_pen_action:QAction = None
     __current_selected_pen_action_index:int = 0 

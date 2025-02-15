@@ -20,7 +20,8 @@ class SettingInterface(ScrollArea):
     minimizeToTrayChanged = pyqtSignal(bool) 
     themeChanged = pyqtSignal(str) 
     # strokeSizeChanged = pyqtSignal(int)
-    __user_sources_path = os.path.dirname(os.path.realpath(__file__)) + "\sources"
+    # __user_sources_path = os.path.dirname(os.path.realpath(__file__)) + "\sources"
+    __user_sources_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sources")
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
