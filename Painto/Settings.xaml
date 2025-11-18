@@ -113,7 +113,45 @@
                        HeaderIcon="{ui:FontIcon Glyph=&#xE740;}">
                     <ToggleSwitch x:Name="ToolBarCollapsed" Toggled="ToolBarCollapsed_Toggled" IsOn="False" />
                 </controls:SettingsCard>
-                
+
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
+                           x:Name="ShortcutsHeader"
+                           Text="Global Shortcuts"></TextBlock>
+
+                <controls:SettingsCard Description="Enable global hotkeys to switch pens even when Painto is not focused."
+                       Header="Enable Global Hotkeys"
+                       HeaderIcon="{ui:FontIcon Glyph=&#xE765;}">
+                    <ToggleSwitch x:Name="GlobalHotkeysSwitch" Toggled="GlobalHotkeysSwitch_Toggled" IsOn="False" />
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Header="Pen Selection Shortcuts"
+                       Description="Automatically assigns [Modifier] + 1, 2, 3... based on your pen list."
+                       HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Modifier Key:" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="PenModifierCombo" SelectionChanged="PenModifierCombo_SelectionChanged" SelectedIndex="0" Width="100">
+                            <ComboBoxItem Content="Ctrl"/>
+                            <ComboBoxItem Content="Alt"/>
+                        </ComboBox>
+                    </StackPanel>
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Header="Draw Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
+                    <Button x:Name="BtnSetDraw" Content="Alt + B" Click="BtnSetShortcut_Click" Tag="Draw" MinWidth="120"/>
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Header="Eraser Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE75C;}">
+                    <Button x:Name="BtnSetEraser" Content="Alt + E" Click="BtnSetShortcut_Click" Tag="Eraser" MinWidth="120"/>
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Header="Computer Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE8B0;}">
+                    <Button x:Name="BtnSetComputer" Content="Alt + C" Click="BtnSetShortcut_Click" Tag="Computer" MinWidth="120"/>
+                </controls:SettingsCard>
+
+                <controls:SettingsCard Header="Clear All Inks" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE74D;}">
+                    <Button x:Name="BtnSetClear" Content="None" Click="BtnSetShortcut_Click" Tag="Clear" MinWidth="120"/>
+                </controls:SettingsCard>
+
             </StackPanel>
         </ScrollViewer>
 

@@ -29,7 +29,7 @@ using Windows.System;
 using Windows.Storage;
 using Newtonsoft.Json;
 using Windows.ApplicationModel.Core;
-using Windows.Graphics.Display; 
+using Windows.Graphics.Display;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -67,6 +67,8 @@ namespace Painto
         private const int DWMWA_NCRENDERING_POLICY = 2;
         private const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
         private const int DWMNCRP_DISABLED = 1;
+
+        private const int PEN_HOTKEY_BASE_ID = 2000;
 
         [DllImport("user32.dll")]
         private static extern int GetWindowLong(IntPtr hwnd, int index);
@@ -124,6 +126,7 @@ namespace Painto
             InitWindow();
             SourceInitialized();
             InitPens();
+            InitHotkeys();
             //LoadSetting();
             //AdaptWindowLocation();
         }
@@ -189,6 +192,9 @@ namespace Painto
         private void PenControl_SaveData(object sender, EventArgs e)
         {
             SavePenItems(penControl.ItemsSource);
+
+            // Reload Hotkey 
+            ReloadHotkeys();
         }
 
         private void InitWindow()
@@ -503,9 +509,12 @@ namespace Painto
                 Icon = "\uEE56",
                 PenColorString = Colors.Black.ToString()
             };
+
             PenItems.Add(new_penData);
             penControl.ItemsSource = PenItems;
             SavePenItems(PenItems); 
+
+            ReloadHotkeys();
         }
 
         private void DeletePen()
@@ -675,6 +684,264 @@ namespace Painto
                 }
             };
         }
+
+        #region Global Hotkeys Logic 
+
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true, EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        // 32-bit 
+        [DllImport("user32.dll", SetLastError = true, EntryPoint = "SetWindowLong")]
+        private static extern IntPtr SetWindowLong32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        private const int GWLP_WNDPROC = -4;
+        private const int WM_HOTKEY = 0x0312;
+
+        private const int HOTKEY_ID_PEN1 = 1001;
+        private const int HOTKEY_ID_PEN2 = 1002;
+        private const int HOTKEY_ID_PEN3 = 1003;
+        private const int HOTKEY_ID_DRAW = 1004; // 'B'
+        private const int HOTKEY_ID_ERASER = 1005; // 'E'
+        private const int HOTKEY_ID_COMPUTER = 1006; // 'C' or 'Esc'
+
+        // 存储旧的窗口处理函数指针
+        private IntPtr _oldWndProc = IntPtr.Zero;
+
+        // 委托保持引用，防止被 GC 回收
+        private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+        private WndProcDelegate _newWndProc;
+
+        public bool IsGlobalHotkeysEnabled { get; private set; } = false;
+
+        private void InitHotkeys()
+        {
+            // 注册全局热键的逻辑
+            // 读取设置
+            var localSettings = ApplicationData.Current.LocalSettings;
+            string enabled = localSettings.Values["GlobalHotkeysEnabled"] as string;
+
+            // 挂钩消息循环 (只需做一次)
+            if (_oldWndProc == IntPtr.Zero)
+            {
+                IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                _newWndProc = new WndProcDelegate(WindowProcess);
+                // 根据位数选择调用
+                if (IntPtr.Size == 8)
+                    _oldWndProc = SetWindowLongPtr(hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
+                else
+                    _oldWndProc = SetWindowLong32(hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_newWndProc));
+            }
+
+            // 如果设置开启，则注册
+            if (enabled == "1")
+            {
+                RegisterAppHotkeys();
+            }
+        }
+
+        public void RegisterAppHotkeys()
+        {
+            // 检查开关
+            var localSettings = ApplicationData.Current.LocalSettings;
+            string enabled = localSettings.Values["GlobalHotkeysEnabled"] as string;
+            if (enabled != "1") return;
+
+            if (IsGlobalHotkeysEnabled) return;
+
+            IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+            // 注册功能键 (读取设置，如果不存在则使用默认值)
+            RegisterSingleHotkey(hwnd, "Draw", HOTKEY_ID_DRAW, 0x0001, (uint)Windows.System.VirtualKey.B); // Default: Alt + B
+            RegisterSingleHotkey(hwnd, "Eraser", HOTKEY_ID_ERASER, 0x0001, (uint)Windows.System.VirtualKey.E); // Default: Alt + E
+            RegisterSingleHotkey(hwnd, "Computer", HOTKEY_ID_COMPUTER, 0x0001, (uint)Windows.System.VirtualKey.C); // Default: Alt + C
+            RegisterSingleHotkey(hwnd, "Clear", HOTKEY_ID_CLEAR, 0, 0); // Default: None
+
+            // 动态注册笔刷键
+            // 获取笔刷修饰键设置 (0=Ctrl, 1=Alt)
+            string penModStr = localSettings.Values["Hotkey_Pen_Mod"] as string;
+            int penModIndex = 0;
+            if (!string.IsNullOrEmpty(penModStr)) penModIndex = int.Parse(penModStr);
+
+            uint penMod = (penModIndex == 1) ? 0x0001u : 0x0002u; // 1=Alt, 2=Ctrl
+
+            // 遍历当前拥有的笔刷数量 (PenItems)
+            if (PenItems != null)
+            {
+                for (int i = 0; i < PenItems.Count; i++)
+                {
+                    // 限制一下，因为键盘数字键通常只有 0-9。
+                    // VirtualKey.Number1 是 49
+                    if (i > 9) break;
+
+                    uint key = (uint)Windows.System.VirtualKey.Number1 + (uint)i;
+                    // ID 从 1000 开始 + index
+                    RegisterHotKey(hwnd, PEN_HOTKEY_BASE_ID + i, penMod, key);
+                }
+            }
+
+            IsGlobalHotkeysEnabled = true;
+        }
+
+        // 辅助方法：注册单个热键，优先读取设置
+        private void RegisterSingleHotkey(IntPtr hwnd, string tag, int id, uint defaultMod, uint defaultKey)
+        {
+            var settings = ApplicationData.Current.LocalSettings.Values;
+            uint mod = defaultMod;
+            uint key = defaultKey;
+
+            if (settings.ContainsKey($"Hotkey_{tag}_Key"))
+            {
+                key = (uint)(int)settings[$"Hotkey_{tag}_Key"];
+                mod = (uint)(int)settings[$"Hotkey_{tag}_Mod"];
+            }
+
+            // 如果 key 为 0，说明未设置
+            if (key != 0)
+            {
+                RegisterHotKey(hwnd, id, mod, key);
+            }
+        }
+
+        public void UnregisterAppHotkeys()
+        {
+            if (!IsGlobalHotkeysEnabled) return;
+
+            IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+
+            // 注销功能键
+            UnregisterHotKey(hwnd, HOTKEY_ID_DRAW);
+            UnregisterHotKey(hwnd, HOTKEY_ID_ERASER);
+            UnregisterHotKey(hwnd, HOTKEY_ID_COMPUTER);
+            UnregisterHotKey(hwnd, HOTKEY_ID_CLEAR);
+
+            // 注销笔刷键 (循环注销 0-9 号笔刷的 ID)
+            for (int i = 0; i <= 9; i++)
+            {
+                UnregisterHotKey(hwnd, PEN_HOTKEY_BASE_ID + i);
+            }
+
+            // 清理旧的固定 ID (如果你之前的代码里有遗留)
+            UnregisterHotKey(hwnd, HOTKEY_ID_PEN1);
+            UnregisterHotKey(hwnd, HOTKEY_ID_PEN2);
+            UnregisterHotKey(hwnd, HOTKEY_ID_PEN3);
+
+            IsGlobalHotkeysEnabled = false;
+        }
+
+        // 自定义消息处理函数
+        private IntPtr WindowProcess(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            if (msg == WM_HOTKEY)
+            {
+                int id = wParam.ToInt32();
+                HandleHotkey(id);
+            }
+
+            return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+        }
+
+        private void HandleHotkey(int id)
+        {
+            // 处理笔刷 (ID 1000 - 1009)
+            if (id >= PEN_HOTKEY_BASE_ID && id <= PEN_HOTKEY_BASE_ID + 9)
+            {
+                int penIndex = id - PEN_HOTKEY_BASE_ID;
+                // 增加安全检查，防止索引越界
+                if (penControl != null && penControl.ItemsSource != null && penIndex < penControl.ItemsSource.Count)
+                {
+                    penControl.SelectPen(penIndex);
+                }
+                return;
+            }
+
+            switch (id)
+            {
+                case HOTKEY_ID_DRAW:
+                    SwitchToMode("DrawMode");
+                    break;
+                case HOTKEY_ID_ERASER:
+                    SwitchToMode("Eraser");
+                    break;
+                case HOTKEY_ID_COMPUTER:
+                    SwitchToMode("ComputerMode");
+                    break;
+                case HOTKEY_ID_CLEAR:
+                    // 执行 Clear All
+                    // 需要确保在 UI 线程
+                    this.DispatcherQueue.TryEnqueue(() =>
+                    {
+                        DeleteAllInks();
+                    });
+                    break;
+            }
+        }
+
+        // 辅助方法：切换模式（从你之前的代码整理）
+        public void SwitchToMode(string tag)
+        {
+            // 需要在 UI 线程执行，因为 WM_HOTKEY 可能来自系统调用
+            this.DispatcherQueue.TryEnqueue(() =>
+            {
+                int index = 0;
+                switch (tag)
+                {
+                    case "ComputerMode": index = 0; break;
+                    case "DrawMode": index = 1; break;
+                    case "Eraser": index = 2; break;
+                }
+
+                MajorFunctionControl.SelectedIndex = index;
+
+                // 执行之前的 ItemClick 逻辑
+                switch (tag)
+                {
+                    case "Eraser":
+                        ToolBarWindow._isEraserMode = true;
+                        if (ToolBarWindow._computerMode)
+                        {
+                            ToolBarWindow.LockScreen();
+                            ToolBarWindow._computerMode = false;
+                        }
+                        break;
+
+                    case "DrawMode":
+                        ToolBarWindow._isEraserMode = false;
+                        if (ToolBarWindow._computerMode)
+                        {
+                            ToolBarWindow.LockScreen();
+                            ToolBarWindow._computerMode = false;
+                        }
+                        break;
+
+                    case "ComputerMode":
+                        if (!ToolBarWindow._computerMode)
+                        {
+                            ToolBarWindow._computerMode = true;
+                            ToolBarWindow.UnlockScreen();
+                        }
+                        break;
+                }
+            });
+        }
+
+        private const int HOTKEY_ID_CLEAR = 1099;
+
+        public void ReloadHotkeys()
+        {
+            UnregisterAppHotkeys();
+            RegisterAppHotkeys();
+        }
+
+        #endregion
 
 
         private void Settings_Closed(object sender, WindowEventArgs args)

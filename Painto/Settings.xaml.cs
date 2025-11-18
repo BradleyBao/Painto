@@ -1,5 +1,5 @@
-﻿using Microsoft.UI.Windowing;
-using Microsoft.UI;
+﻿using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -7,20 +7,21 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using Painto.Modules;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Storage;
+using Windows.System;
+using Windows.UI;
 using WinRT.Interop;
 using WinUIEx;
-using System.Diagnostics;
-using Painto.Modules;
-using System.Collections.ObjectModel;
-using Windows.UI;
-using Windows.Storage;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -34,6 +35,8 @@ namespace Painto
     {
         public ObservableCollection<DisplayInfo> Displays { get; } = new ObservableCollection<DisplayInfo>();
         private int selectedIndex = 0;
+        private bool _isListening = false;
+        private Button _listeningButton = null;
         public Settings()
         {
             this.InitializeComponent();
@@ -68,6 +71,7 @@ namespace Painto
 
             // Setting 2: UI related 
             SetupUI();
+
         }
 
         public void GetAllDisplays()
@@ -133,6 +137,197 @@ namespace Painto
             {
                 ToolBarCollapsed.IsOn = true;
             }
+
+            // Hotkeys UI 
+            string hotkeysEnabled = localSettings.Values["GlobalHotkeysEnabled"] as string;
+            if (hotkeysEnabled == "1")
+            {
+                GlobalHotkeysSwitch.IsOn = true;
+            } else
+            {
+                GlobalHotkeysSwitch.IsOn = false;
+            }
+
+            InitHotkeysUI();
+        }
+
+        private void InitHotkeysUI()
+        {
+            var localSettings = ApplicationData.Current.LocalSettings;
+
+            // 1. 初始化全局开关
+            string hotkeysEnabled = localSettings.Values["GlobalHotkeysEnabled"] as string;
+            GlobalHotkeysSwitch.IsOn = (hotkeysEnabled == "1");
+
+            // 2. 初始化笔刷修饰键 (0=Ctrl, 1=Alt)
+            string penMod = localSettings.Values["Hotkey_Pen_Mod"] as string;
+            if (!string.IsNullOrEmpty(penMod))
+                PenModifierCombo.SelectedIndex = int.Parse(penMod);
+            else
+                PenModifierCombo.SelectedIndex = 0; // 默认 Ctrl
+
+            // 3. 初始化按钮文本
+            UpdateShortcutButtonText(BtnSetDraw, "Draw", "Alt + B");
+            UpdateShortcutButtonText(BtnSetEraser, "Eraser", "Alt + E");
+            UpdateShortcutButtonText(BtnSetComputer, "Computer", "Alt + C");
+            UpdateShortcutButtonText(BtnSetClear, "Clear", "None");
+        }
+
+        private void UpdateShortcutButtonText(Button btn, string tag, string defaultText)
+        {
+            var settings = ApplicationData.Current.LocalSettings.Values;
+            if (settings.ContainsKey($"Hotkey_{tag}_Key"))
+            {
+                int vKey = (int)settings[$"Hotkey_{tag}_Key"];
+                int mod = (int)settings[$"Hotkey_{tag}_Mod"];
+                btn.Content = GetKeyString(mod, vKey);
+            }
+            else
+            {
+                btn.Content = defaultText;
+            }
+        }
+
+        // 点击按钮进入“监听模式”
+        private void BtnSetShortcut_Click(object sender, RoutedEventArgs e)
+        {
+            if (App.m_window != null)
+            {
+                App.m_window.UnregisterAppHotkeys();
+            }
+
+            var btn = sender as Button;
+            if (_isListening)
+            {
+                // 如果点击了其他按钮，取消之前的监听
+                CancelListening();
+            }
+
+            _isListening = true;
+            _listeningButton = btn;
+            btn.Content = "Listening... (Press Keys)";
+
+            // 注册 KeyDown 事件来捕获按键
+            // 注意：WinUI 3 Window 级别的按键监听比较特殊，我们在 Grid 或者 Content 上监听
+            // 这里我们利用 Button 获得焦点后的 KeyDown
+            btn.KeyDown += ShortcutButton_KeyDown;
+            btn.LostFocus += ShortcutButton_LostFocus;
+        }
+
+        private void ShortcutButton_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_isListening)
+            {
+                CancelListening();
+            }
+        }
+
+        private void CancelListening()
+        {
+            if (_listeningButton != null)
+            {
+                string tag = _listeningButton.Tag.ToString();
+                UpdateShortcutButtonText(_listeningButton, tag, "Error");
+
+                _listeningButton.KeyDown -= ShortcutButton_KeyDown;
+                _listeningButton.LostFocus -= ShortcutButton_LostFocus;
+                _listeningButton = null;
+            }
+            _isListening = false;
+
+            if (GlobalHotkeysSwitch.IsOn && App.m_window != null)
+            {
+                App.m_window.RegisterAppHotkeys();
+            }
+        }
+
+        private void ShortcutButton_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (!_isListening || _listeningButton == null) return;
+
+            e.Handled = true;
+            var vKey = e.Key;
+
+            // 忽略单纯的修饰键按下 (比如只按了 Ctrl 还没按字母)
+            if (vKey == VirtualKey.Control || vKey == VirtualKey.Menu || vKey == VirtualKey.Shift || vKey == VirtualKey.LeftWindows || vKey == VirtualKey.RightWindows)
+            {
+                return;
+            }
+
+            if (vKey == VirtualKey.Escape)
+            {
+                CancelListening();
+                return;
+            }
+
+            // 获取修饰键状态
+            // WinUI 的 GetCurrentKeyState 可以检查
+            var ctrl = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control);
+            var alt = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Menu);
+            var shift = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift);
+
+            bool isCtrl = (ctrl & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+            bool isAlt = (alt & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+            bool isShift = (shift & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+
+            // 如果按下了 ESC，视为取消或清除（这里根据你的需求，设为清除或取消）
+            if (vKey == VirtualKey.Escape)
+            {
+                CancelListening();
+                return;
+            }
+
+            // 计算 Mod ID (Win32 RegisterHotKey format: Alt=1, Ctrl=2, Shift=4)
+            int win32Mod = 0;
+            if (isAlt) win32Mod |= 1;
+            if (isCtrl) win32Mod |= 2;
+            if (isShift) win32Mod |= 4;
+
+            // 保存设置
+            string tag = _listeningButton.Tag.ToString();
+            var localSettings = ApplicationData.Current.LocalSettings;
+            localSettings.Values[$"Hotkey_{tag}_Key"] = (int)vKey;
+            localSettings.Values[$"Hotkey_{tag}_Mod"] = win32Mod;
+
+            // 更新 UI
+            _listeningButton.Content = GetKeyString(win32Mod, (int)vKey);
+
+            // 结束监听
+            _listeningButton.KeyDown -= ShortcutButton_KeyDown;
+            _listeningButton.LostFocus -= ShortcutButton_LostFocus;
+            _listeningButton = null;
+            _isListening = false;
+
+            if (App.m_window != null)
+            {
+                App.m_window.ReloadHotkeys();
+            }
+        }
+
+        private string GetKeyString(int mod, int vKey)
+        {
+            string str = "";
+            if ((mod & 2) != 0) str += "Ctrl + ";
+            if ((mod & 1) != 0) str += "Alt + ";
+            if ((mod & 4) != 0) str += "Shift + ";
+
+            str += ((VirtualKey)vKey).ToString();
+            return str;
+        }
+
+        private void PenModifierCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var combo = sender as ComboBox;
+            if (combo == null) return;
+
+            var localSettings = ApplicationData.Current.LocalSettings;
+            // 保存 index: 0 = Ctrl, 1 = Alt
+            localSettings.Values["Hotkey_Pen_Mod"] = combo.SelectedIndex.ToString();
+
+            if (App.m_window != null)
+            {
+                App.m_window.ReloadHotkeys();
+            }
         }
 
         public DisplayArea GetCurrentWindowDisplay(Window window)
@@ -192,6 +387,27 @@ namespace Painto
                 }
 
                 App.m_window.SetCollapsed(isOn);
+            }
+        }
+
+        // Global Shortcut Key Toggled Event 
+        private void GlobalHotkeysSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
+            var toggleSwitch = sender as ToggleSwitch;
+
+            if (toggleSwitch != null)
+            {
+                if (toggleSwitch.IsOn)
+                {
+                    localSettings.Values["GlobalHotkeysEnabled"] = "1";
+                    App.m_window.RegisterAppHotkeys();
+                }
+                else
+                {
+                    localSettings.Values["GlobalHotkeysEnabled"] = "0";
+                    App.m_window.UnregisterAppHotkeys();
+                }
             }
         }
 

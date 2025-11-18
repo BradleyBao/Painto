@@ -86,6 +86,28 @@ namespace Painto
             SaveData?.Invoke(this, EventArgs.Empty);
         }
 
+        public void SelectPen(int index)
+        {
+            if (ItemsSource != null && index >= 0 && index < ItemsSource.Count)
+            {
+                // 更新 UI 选中状态
+                PenItemList.SelectedIndex = index;
+
+                // 获取数据
+                var selectedPen = ItemsSource[index];
+                globalClickedItem = selectedPen;
+
+                // 应用笔刷设置到 ToolBarWindow
+                ToolBarWindow.penColor = selectedPen.PenColor;
+                ToolBarWindow.penThickness = selectedPen.Thickness;
+
+                // 触发切换回绘画模式的事件 
+                SwitchBackDrawControl?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        
+
         public void ShutDown()
         {
             if (penWindow != null)
