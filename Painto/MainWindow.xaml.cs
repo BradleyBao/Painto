@@ -272,46 +272,51 @@ namespace Painto
             //var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
             //int screenHeight = displayArea.WorkArea.Height;
 
+            // 获取目标显示器信息
             var displays = DisplayArea.FindAll();
-            DisplayArea display = displays[monitorIndex];
-            var displayArea = display.WorkArea;
-            int screenHeight = displayArea.Height;
-            int screenX = displayArea.X;
-            int screenY = displayArea.Y;
-            int taskbarHeight = GetTaskbarHeight();
+            if (monitorIndex >= displays.Count) monitorIndex = 0;
 
-            // 根据 DPI 更改窗口大小
-            int controlPanelWidth = (int)(ControlPanel.ActualWidth * dpiWindow / 96.0);
-            int controlPanelHeight = (int)(ControlPanel.ActualHeight * dpiWindow / 96.0); 
-            //this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(5 + PenItems.Count, screenHeight, controlPanelWidth, controlPanelHeight));
-            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(5 + screenX, screenHeight - taskbarHeight - 5, controlPanelWidth, controlPanelHeight));
+            DisplayArea display = displays[monitorIndex];
+            var workArea = display.WorkArea;
+
+            // DPI Scale 
+            double dpiScale = Content.XamlRoot != null ? Content.XamlRoot.RasterizationScale : 1.0;
+
+            // 额外20像素，防止右侧图标渲染误差被切掉
+            int controlPanelWidth = (int)((ControlPanel.ActualWidth + 20) * dpiScale);
+            int controlPanelHeight = (int)(ControlPanel.ActualHeight * dpiScale);
+
+            // 计算坐标
+            int newX = workArea.X + 5;
+            int newY = (workArea.Y + workArea.Height) - controlPanelHeight - 5;
+
+            // 应用大小和位置
+            if (controlPanelWidth > 0 && controlPanelHeight > 0)
+            {
+                this.AppWindow.MoveAndResize(new RectInt32(newX, newY, controlPanelWidth, controlPanelHeight));
+            }
         }
 
         public void MoveWindowFromMonitor(int indexMonitor, bool isFullMonitor)
         {
             this.monitorFull = isFullMonitor;
             var displays = DisplayArea.FindAll();
-            if (indexMonitor < displays.Count)
-            {
-                this.monitorIndex = indexMonitor;
-                DisplayArea display = displays[indexMonitor];
-                var displayArea = display.WorkArea;
-                int screenHeight = displayArea.Height;
-                int screenX = displayArea.X;
-                int taskbarHeight = GetTaskbarHeight();
 
-                // 根据 DPI 更改窗口大小
-                int controlPanelWidth = (int)(ControlPanel.ActualWidth * dpiWindow / 96.0);
-                int controlPanelHeight = (int)(ControlPanel.ActualHeight * dpiWindow / 96.0);
-                //this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(5 + PenItems.Count, screenHeight, controlPanelWidth, controlPanelHeight));
-                this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(screenX + 5, screenHeight - taskbarHeight - 5, controlPanelWidth, controlPanelHeight));
-                if (this.monitorFull)
-                {
-                    _toolbarWindow.SetFullscreenAcrossAllDisplays();
-                } else
-                {
-                    _toolbarWindow.MoveViaMonitor(indexMonitor);
-                }
+            // 确保索引安全
+            if (indexMonitor >= displays.Count) indexMonitor = 0;
+
+            this.monitorIndex = indexMonitor;
+
+            // AdaptWindowLocation 依赖 ControlPanel.ActualWidth
+            AdaptWindowLocation();
+
+            if (this.monitorFull)
+            {
+                _toolbarWindow.SetFullscreenAcrossAllDisplays();
+            }
+            else
+            {
+                _toolbarWindow.MoveViaMonitor(indexMonitor);
             }
         }
 

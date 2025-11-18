@@ -10,7 +10,7 @@
   <Identity
     Name="TianYi.Painto"
     Publisher="CN=98419A6D-1B04-4EA1-8658-1B5D9D2D15EA"
-    Version="1.3.0.0" />
+    Version="1.4.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="f78ca8ef-1e19-4dfd-93f6-de614cc0cb6b" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

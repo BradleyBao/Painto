@@ -16,7 +16,7 @@
     <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <PackageCertificateThumbprint>E3CA14AEBCD388A30D1395C14E6EABBE166AEBF0</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>7643A6FE9DD437C8BB802FDFA0011931201B061B</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
@@ -27,7 +27,7 @@
 	  <PlatformTarget Condition="'$(Platform)' == 'x64'">x64</PlatformTarget>
 	  <PlatformTarget Condition="'$(Platform)' == 'x86'">x86</PlatformTarget>
 	  <PlatformTarget Condition="'$(Platform)' == 'ARM64'">ARM64</PlatformTarget>
-    <AppxPackageDir>E:\Workspace\OutputEXE\PaintoOutput\</AppxPackageDir>
+    <AppxPackageDir>C:\Users\tianyi\Documents\Workspace\OutputEXE\PaintoOutput\</AppxPackageDir>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="CustomizePenWindow.xaml" />
