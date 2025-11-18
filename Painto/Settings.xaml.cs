@@ -22,6 +22,8 @@ using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
 using WinUIEx;
+using Windows.Globalization;
+using Microsoft.Windows.ApplicationModel.Resources;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -37,6 +39,7 @@ namespace Painto
         private int selectedIndex = 0;
         private bool _isListening = false;
         private Button _listeningButton = null;
+        private bool _isInitializing = false;
         public Settings()
         {
             this.InitializeComponent();
@@ -72,6 +75,100 @@ namespace Painto
             // Setting 2: UI related 
             SetupUI();
 
+            // Setting 3: Language Related
+            InitLanguageUI();
+
+        }
+
+        private string GetString(string key)
+        {
+            var resourceLoader = new ResourceLoader();
+            return resourceLoader.GetString(key);
+        }
+
+        private void InitLanguageUI()
+        {
+            _isInitializing = true; // 【开始】锁定事件处理
+
+            try
+            {
+                string currentLang = Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride;
+
+                if (string.IsNullOrEmpty(currentLang))
+                {
+                    LanguageComboBox.SelectedIndex = 0;
+                }
+                else if (currentLang.StartsWith("en"))
+                {
+                    LanguageComboBox.SelectedIndex = 1;
+                }
+                else if (currentLang.StartsWith("zh"))
+                {
+                    LanguageComboBox.SelectedIndex = 2;
+                }
+                else
+                {
+                    LanguageComboBox.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                _isInitializing = false; // 【结束】无论如何都要解锁
+            }
+        }
+
+        // 语言切换逻辑
+        private async void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // 初始化时跳过
+            if (_isInitializing) return;
+
+            var combo = sender as ComboBox;
+            if (combo == null || combo.SelectedItem == null) return;
+
+            var item = combo.SelectedItem as ComboBoxItem;
+
+            // 安全检查 Tag
+            if (item.Tag == null) return;
+
+            string langCode = item.Tag.ToString();
+            string newLangCode = "";
+
+            if (langCode == "Auto")
+            {
+                newLangCode = "";
+            }
+            else
+            {
+                newLangCode = langCode;
+            }
+
+            // 只有当语言真的改变了才提示 (避免重复点击相同选项触发)
+            // 获取当前生效的语言设置，如果为空则默认为自动(空字符串)
+            string currentSetting = Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride;
+            if (currentSetting == newLangCode) return;
+
+            // 设置新语言
+            Windows.Globalization.ApplicationLanguages.PrimaryLanguageOverride = newLangCode;
+
+            // 弹出重启提示
+            ContentDialog dialog = new ContentDialog();
+
+            // WinUI 3 必须设置 XamlRoot，通常使用当前窗口内容的 XamlRoot
+            if (this.Content != null && this.Content.XamlRoot != null)
+            {
+                dialog.XamlRoot = this.Content.XamlRoot;
+            }
+
+            // 设置文本 (使用资源加载器)
+            dialog.Title = GetString("RestartDialog/Title");
+            dialog.Content = GetString("RestartDialog/Content");
+            dialog.CloseButtonText = GetString("RestartDialog/CloseButtonText");
+
+            // 设置样式 (可选，保持默认即可)
+            dialog.DefaultButton = ContentDialogButton.Close;
+
+            await dialog.ShowAsync();
         }
 
         public void GetAllDisplays()
@@ -170,7 +267,7 @@ namespace Painto
             UpdateShortcutButtonText(BtnSetDraw, "Draw", "Alt + B");
             UpdateShortcutButtonText(BtnSetEraser, "Eraser", "Alt + E");
             UpdateShortcutButtonText(BtnSetComputer, "Computer", "Alt + C");
-            UpdateShortcutButtonText(BtnSetClear, "Clear", "None");
+            UpdateShortcutButtonText(BtnSetClear, "Clear", GetString("NoneText"));
         }
 
         private void UpdateShortcutButtonText(Button btn, string tag, string defaultText)
@@ -184,7 +281,15 @@ namespace Painto
             }
             else
             {
-                btn.Content = defaultText;
+                // 如果 defaultText 是 "None"，则尝试加载翻译
+                if (defaultText == "None")
+                {
+                    btn.Content = GetString("NoneText");
+                }
+                else
+                {
+                    btn.Content = defaultText;
+                }
             }
         }
 
@@ -205,7 +310,7 @@ namespace Painto
 
             _isListening = true;
             _listeningButton = btn;
-            btn.Content = "Listening... (Press Keys)";
+            btn.Content = GetString("ListeningText");
 
             // 注册 KeyDown 事件来捕获按键
             // 注意：WinUI 3 Window 级别的按键监听比较特殊，我们在 Grid 或者 Content 上监听
@@ -227,7 +332,7 @@ namespace Painto
             if (_listeningButton != null)
             {
                 string tag = _listeningButton.Tag.ToString();
-                UpdateShortcutButtonText(_listeningButton, tag, "Error");
+                UpdateShortcutButtonText(_listeningButton, tag, GetString("ErrorText"));
 
                 _listeningButton.KeyDown -= ShortcutButton_KeyDown;
                 _listeningButton.LostFocus -= ShortcutButton_LostFocus;

@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="Painto.Settings"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -9,37 +8,17 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
     xmlns:ui="using:CommunityToolkit.WinUI"
-    mc:Ignorable="d"> 
-    
+    mc:Ignorable="d">
+
     <Grid>
         <Grid.RowDefinitions>
-            <!--<RowDefinition Height="Auto" />-->
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <!--<VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState x:Name="WideLayout">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="{StaticResource Breakpoint640Plus}" />
-                    </VisualState.StateTriggers>
-                </VisualState>
-                <VisualState x:Name="NarrowLayout">
-                    <VisualState.StateTriggers>
-                        <AdaptiveTrigger MinWindowWidth="0" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="contentSV.Padding" Value="16,0" />
-                        <Setter Target="PageHeader.Margin" Value="16,48,0,0" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>-->
 
         <TextBlock
         x:Name="TitleTxt"
-        Text="Setting"
-        x:Uid="SettingTitle"
+        x:Uid="SettingsTitle"
         Margin="36,24,36,24"
         Grid.Row="0"
         Style="{StaticResource TitleTextBlockStyle}" />
@@ -54,81 +33,81 @@
         VerticalScrollMode="Auto">
             <StackPanel Spacing="4">
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
+                   Text="General"
+                   x:Name="GeneralHeader"
+                   x:Uid="GeneralHeader" />
+                <controls:SettingsCard x:Uid="LanguageSettingCard"
+                       HeaderIcon="{ui:FontIcon Glyph=&#xE774;}">
+                    <ComboBox x:Name="LanguageComboBox" SelectionChanged="LanguageComboBox_SelectionChanged" Width="150">
+                        <ComboBoxItem x:Uid="Language_Auto" Tag="Auto" />
+                        <ComboBoxItem x:Uid="Language_English" Tag="en-US" />
+                        <ComboBoxItem x:Uid="Language_Chinese" Tag="zh-CN" />
+                    </ComboBox>
+                </controls:SettingsCard>
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
                    x:Name="MonitorDisplayHeader"
-                   x:Uid="MonitorDisplayHeaderUid"
-                   Text="Monitors" />
+                   x:Uid="MonitorHeader" />
 
                 <controls:SettingsCard HorizontalContentAlignment="Left"
                          ContentAlignment="Vertical"
-                         Description="All monitors activated"
-                         Header="List of Monitors">
-                    <!-- GridView绑定到名为 Displays 的集合 -->
+                         x:Uid="MonitorListCard">
                     <GridView x:Name="DisplayGridView" 
-              SelectedIndex="0"
-              ItemsSource="{x:Bind Displays, Mode=OneWay}">
+                              SelectedIndex="0"
+                              ItemsSource="{x:Bind Displays, Mode=OneWay}">
                         <GridView.ItemTemplate>
-                            <!-- 根据实际需求设计展示模板 -->
                             <DataTemplate x:DataType="modules:DisplayInfo">
-                                <!-- 这里只是简单使用一个 Border 表示显示器，你可以添加更多信息 -->
                                 <StackPanel Orientation="Vertical" Margin="8">
                                     <Border Width="64" 
-                            Height="64" 
-                            Background="{x:Bind BackgroundColor}"
-                            CornerRadius="4" />
+                                            Height="64" 
+                                            Background="{x:Bind BackgroundColor}"
+                                            CornerRadius="4" />
                                     <TextBlock Text="{x:Bind ID}"
-                               HorizontalAlignment="Center" 
-                               Margin="0,4,0,0"/>
+                                               HorizontalAlignment="Center" 
+                                               Margin="0,4,0,0"/>
                                 </StackPanel>
                             </DataTemplate>
                         </GridView.ItemTemplate>
                     </GridView>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Description="Set the drawing area on every monitor."
-                                       Header="Full Drawing Area"
+                <controls:SettingsCard x:Uid="FullMonitorCard"
                                        HeaderIcon="{ui:FontIcon Glyph=&#xE740;}">
                     <ToggleSwitch x:Name="FullMonitorStatus" IsOn="False" />
                 </controls:SettingsCard>
 
-
-                <controls:SettingsCard Description="Set the monitor that Painto display."
-                               Header="Set the monitor"
-                               HeaderIcon="{ui:FontIcon Glyph=&#xE7FA;}"
-                               IsEnabled="True">
+                <controls:SettingsCard x:Uid="SetMonitorCard"
+                                       HeaderIcon="{ui:FontIcon Glyph=&#xE7FA;}"
+                                       IsEnabled="True">
                     <controls:SettingsCard.Resources>
                         <x:Double x:Key="SettingsCardWrapThreshold">800</x:Double>
                         <x:Double x:Key="SettingsCardWrapNoIconThreshold">600</x:Double>
                     </controls:SettingsCard.Resources>
-                    <Button Click="SetMonitorBtn_Click" Name="SetMonitorBtn" Content="Set"
-                    Style="{StaticResource DefaultButtonStyle}" />
+                    <Button Click="SetMonitorBtn_Click" Name="SetMonitorBtn" x:Uid="SetMonitorBtn"
+                            Style="{StaticResource DefaultButtonStyle}" />
                 </controls:SettingsCard>
 
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
-               x:Name="ToolbarUIHeader"
-               x:Uid="ToolbarUIHeaderUid"
-               Text="ToolBar UI" />
+                   x:Name="ToolbarUIHeader"
+                   x:Uid="ToolbarUIHeader" />
 
-                <controls:SettingsCard Description="Set the toolbar window whether it would automatically collapsed if not focused."
-                       Header="ToolBar Collapsed"
+                <controls:SettingsCard x:Uid="ToolbarCollapsedCard"
                        HeaderIcon="{ui:FontIcon Glyph=&#xE740;}">
                     <ToggleSwitch x:Name="ToolBarCollapsed" Toggled="ToolBarCollapsed_Toggled" IsOn="False" />
                 </controls:SettingsCard>
 
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
                            x:Name="ShortcutsHeader"
-                           Text="Global Shortcuts"></TextBlock>
+                           x:Uid="ShortcutsHeader" />
 
-                <controls:SettingsCard Description="Enable global hotkeys to switch pens even when Painto is not focused."
-                       Header="Enable Global Hotkeys"
+                <controls:SettingsCard x:Uid="GlobalHotkeysCard"
                        HeaderIcon="{ui:FontIcon Glyph=&#xE765;}">
                     <ToggleSwitch x:Name="GlobalHotkeysSwitch" Toggled="GlobalHotkeysSwitch_Toggled" IsOn="False" />
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Header="Pen Selection Shortcuts"
-                       Description="Automatically assigns [Modifier] + 1, 2, 3... based on your pen list."
-                       HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
+                <controls:SettingsCard x:Uid="PenShortcutsCard"
+                                       HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="Modifier Key:" VerticalAlignment="Center"/>
+                        <TextBlock x:Uid="ModifierKeyLabel" VerticalAlignment="Center"/>
                         <ComboBox x:Name="PenModifierCombo" SelectionChanged="PenModifierCombo_SelectionChanged" SelectedIndex="0" Width="100">
                             <ComboBoxItem Content="Ctrl"/>
                             <ComboBoxItem Content="Alt"/>
@@ -136,25 +115,23 @@
                     </StackPanel>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Header="Draw Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
+                <controls:SettingsCard x:Uid="DrawModeCard" HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
                     <Button x:Name="BtnSetDraw" Content="Alt + B" Click="BtnSetShortcut_Click" Tag="Draw" MinWidth="120"/>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Header="Eraser Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE75C;}">
+                <controls:SettingsCard x:Uid="EraserModeCard" HeaderIcon="{ui:FontIcon Glyph=&#xE75C;}">
                     <Button x:Name="BtnSetEraser" Content="Alt + E" Click="BtnSetShortcut_Click" Tag="Eraser" MinWidth="120"/>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Header="Computer Mode" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE8B0;}">
+                <controls:SettingsCard x:Uid="ComputerModeCard" HeaderIcon="{ui:FontIcon Glyph=&#xE8B0;}">
                     <Button x:Name="BtnSetComputer" Content="Alt + C" Click="BtnSetShortcut_Click" Tag="Computer" MinWidth="120"/>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard Header="Clear All Inks" Description="Click button to record new shortcut" HeaderIcon="{ui:FontIcon Glyph=&#xE74D;}">
+                <controls:SettingsCard x:Uid="ClearAllCard" HeaderIcon="{ui:FontIcon Glyph=&#xE74D;}">
                     <Button x:Name="BtnSetClear" Content="None" Click="BtnSetShortcut_Click" Tag="Clear" MinWidth="120"/>
                 </controls:SettingsCard>
 
             </StackPanel>
         </ScrollViewer>
-
     </Grid>
-    
 </Window>

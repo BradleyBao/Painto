@@ -1,0 +1,243 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ApplyBtn.Content" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="CancelBtn.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ClearAllCard.Description" xml:space="preserve">
+    <value>Click button to record new shortcut</value>
+  </data>
+  <data name="ClearAllCard.Header" xml:space="preserve">
+    <value>Clear All Inks</value>
+  </data>
+  <data name="ComputerModeCard.Description" xml:space="preserve">
+    <value>Click button to record new shortcut</value>
+  </data>
+  <data name="ComputerModeCard.Header" xml:space="preserve">
+    <value>Computer Mode</value>
+  </data>
+  <data name="CustomizePenTitle.Title" xml:space="preserve">
+    <value>Customize Pen</value>
+  </data>
+  <data name="DrawModeCard.Description" xml:space="preserve">
+    <value>Click button to record new shortcut</value>
+  </data>
+  <data name="DrawModeCard.Header" xml:space="preserve">
+    <value>Draw Mode</value>
+  </data>
+  <data name="EraserModeCard.Description" xml:space="preserve">
+    <value>Click button to record new shortcut</value>
+  </data>
+  <data name="EraserModeCard.Header" xml:space="preserve">
+    <value>Eraser Mode</value>
+  </data>
+  <data name="ErrorText" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="FullMonitorCard.Description" xml:space="preserve">
+    <value>Set the drawing area on every monitor.</value>
+  </data>
+  <data name="FullMonitorCard.Header" xml:space="preserve">
+    <value>Full Drawing Area</value>
+  </data>
+  <data name="GlobalHotkeysCard.Description" xml:space="preserve">
+    <value>Enable global hotkeys to switch pens even when Painto is not focused.</value>
+  </data>
+  <data name="GlobalHotkeysCard.Header" xml:space="preserve">
+    <value>Enable Global Hotkeys</value>
+  </data>
+  <data name="LanguageSettingCard.Description" xml:space="preserve">
+    <value>Select your preferred language (Requires restart).</value>
+  </data>
+  <data name="LanguageSettingCard.Header" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Language_Auto.Content" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Language_Chinese.Content" xml:space="preserve">
+    <value>中文</value>
+  </data>
+  <data name="Language_English.Content" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="ListeningText" xml:space="preserve">
+    <value>Listening... (Press Keys)</value>
+  </data>
+  <data name="ModifierKeyLabel.Text" xml:space="preserve">
+    <value>Modifier Key:</value>
+  </data>
+  <data name="MonitorHeader.Text" xml:space="preserve">
+    <value>Monitors</value>
+  </data>
+  <data name="MonitorListCard.Description" xml:space="preserve">
+    <value>All monitors activated</value>
+  </data>
+  <data name="MonitorListCard.Header" xml:space="preserve">
+    <value>List of Monitors</value>
+  </data>
+  <data name="NoneText" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="PenShortcutsCard.Description" xml:space="preserve">
+    <value>Automatically assigns [Modifier] + 1, 2, 3... based on your pen list.</value>
+  </data>
+  <data name="PenShortcutsCard.Header" xml:space="preserve">
+    <value>Pen Selection Shortcuts</value>
+  </data>
+  <data name="RestartDialog.CloseButtonText" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="RestartDialog.Content" xml:space="preserve">
+    <value>Please restart the application for language changes to take effect.</value>
+  </data>
+  <data name="RestartDialog.Title" xml:space="preserve">
+    <value>Restart Required</value>
+  </data>
+  <data name="SetMonitorBtn.Content" xml:space="preserve">
+    <value>Set</value>
+  </data>
+  <data name="SetMonitorCard.Description" xml:space="preserve">
+    <value>Set the monitor that Painto displays.</value>
+  </data>
+  <data name="SetMonitorCard.Header" xml:space="preserve">
+    <value>Set the monitor</value>
+  </data>
+  <data name="SettingsTitle.Text" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="ShortcutsHeader.Text" xml:space="preserve">
+    <value>Global Shortcuts</value>
+  </data>
+  <data name="ThicknessHeader.Header" xml:space="preserve">
+    <value>Thickness</value>
+  </data>
+  <data name="ToolbarCollapsedCard.Description" xml:space="preserve">
+    <value>Automatically collapse the toolbar window when not focused.</value>
+  </data>
+  <data name="ToolbarCollapsedCard.Header" xml:space="preserve">
+    <value>Auto-Collapse Toolbar</value>
+  </data>
+  <data name="ToolbarUIHeader.Text" xml:space="preserve">
+    <value>ToolBar UI</value>
+  </data>
+</root>
