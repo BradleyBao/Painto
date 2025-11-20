@@ -175,6 +175,17 @@ namespace Painto
                 localSettings.Values["IsToolBarCollapse"] = "0";
             }
 
+            // 读取橡皮擦模式设置
+            string isPixelEraser = localSettings.Values["IsPixelEraser"] as string;
+            if (!string.IsNullOrEmpty(isPixelEraser))
+            {
+                ToolBarWindow.IsPixelEraserMode = bool.Parse(isPixelEraser);
+            }
+            else
+            {
+                ToolBarWindow.IsPixelEraserMode = false; // 默认为整根删除
+            }
+
         }
 
         private void PenControl_SwitchBackDrawControl(object sender, EventArgs e)

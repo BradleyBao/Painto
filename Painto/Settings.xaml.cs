@@ -40,6 +40,7 @@ namespace Painto
         private bool _isListening = false;
         private Button _listeningButton = null;
         private bool _isInitializing = false;
+        private bool _isUiLoaded = false;
         public Settings()
         {
             this.InitializeComponent();
@@ -69,6 +70,7 @@ namespace Painto
 
         public void Init()
         {
+            _isUiLoaded = false;
             // Setting 1: Monitor Related: Get All Monitors and Full Monitor
             GetAllDisplays();
 
@@ -77,6 +79,8 @@ namespace Painto
 
             // Setting 3: Language Related
             InitLanguageUI();
+
+            _isUiLoaded = true;
 
         }
 
@@ -237,12 +241,32 @@ namespace Painto
 
             // Hotkeys UI 
             string hotkeysEnabled = localSettings.Values["GlobalHotkeysEnabled"] as string;
-            if (hotkeysEnabled == "1")
+            GlobalHotkeysSwitch.IsOn = (hotkeysEnabled == "1");
+
+            string isPixelEraser = localSettings.Values["IsPixelEraser"] as string;
+            if (!string.IsNullOrEmpty(isPixelEraser))
             {
-                GlobalHotkeysSwitch.IsOn = true;
-            } else
+                bool pixelMode = bool.Parse(isPixelEraser);
+                EraserModeSwitch.IsOn = pixelMode;
+                // 同时也确保静态变量被更新
+                ToolBarWindow.IsPixelEraserMode = pixelMode;
+            }
+            else
             {
-                GlobalHotkeysSwitch.IsOn = false;
+                EraserModeSwitch.IsOn = false;
+                ToolBarWindow.IsPixelEraserMode = false;
+            }
+
+            string eraserSizeStr = localSettings.Values["EraserSize"] as string;
+            if (!string.IsNullOrEmpty(eraserSizeStr))
+            {
+                double size = double.Parse(eraserSizeStr);
+                EraserSizeSlider.Value = size;
+                ToolBarWindow.EraserSize = size;
+            }
+            else
+            {
+                EraserSizeSlider.Value = 70.0;
             }
 
             InitHotkeysUI();
@@ -514,6 +538,31 @@ namespace Painto
                     App.m_window.UnregisterAppHotkeys();
                 }
             }
+        }
+
+        private void EraserModeSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            var toggle = sender as ToggleSwitch;
+            if (toggle != null)
+            {
+                // 修改静态变量，控制 ToolBarWindow 的行为
+                ToolBarWindow.IsPixelEraserMode = toggle.IsOn;
+
+                // 保存到 LocalSettings
+                ApplicationData.Current.LocalSettings.Values["IsPixelEraser"] = toggle.IsOn.ToString();
+            }
+        }
+
+        private void EraserSizeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            // 确保 UI 已加载，避免初始化时触发
+            if (!_isUiLoaded) return;
+            double newSize = e.NewValue;
+            // 更新 ToolBarWindow 静态变量
+            ToolBarWindow.EraserSize = newSize;
+
+            // 保存设置
+            ApplicationData.Current.LocalSettings.Values["EraserSize"] = newSize.ToString();
         }
 
         // Test Method

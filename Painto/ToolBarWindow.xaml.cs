@@ -1,14 +1,15 @@
-﻿using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.Graphics.Canvas.UI.Xaml;
+﻿using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
-using System.Numerics;
-using Windows.UI;
-using System.Collections.Generic;
-using System;
-using Microsoft.UI.Windowing;
+using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
+using System;
+using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.InteropServices;
+using Windows.UI;
 using WinRT.Interop;
 
 namespace Painto
@@ -22,6 +23,7 @@ namespace Painto
             public Color Color { get; set; }
             public float Size { get; set; }
             public CanvasGeometry CachedGeometry { get; set; }
+            public bool IsEraserStroke { get; set; } = false;
         }
 
         private List<Stroke> _allStrokes = new List<Stroke>();
@@ -34,6 +36,13 @@ namespace Painto
         // 笔刷属性 (静态变量供外部修改)
         public static Color penColor = Colors.Black;
         public static int penThickness = 5;
+
+        // 控制橡皮擦模式
+        // true = 真实擦除 (Pixel Eraser), false = 整根擦除 (Object Eraser)
+        public static bool IsPixelEraserMode = false;
+        public static double EraserSize = 30.0;
+        private Vector2 _currentCursorPos = Vector2.Zero;
+        private bool _isHovering = false; // 鼠标是否在窗口内
 
         // 窗口穿透相关常量
         private const int WS_EX_TRANSPARENT = 0x00000020;
@@ -152,7 +161,23 @@ namespace Painto
 
             if (_isEraserMode)
             {
-                TryErase(vecPt);
+                if (IsPixelEraserMode) // 模式 A：真实橡皮擦
+                {
+                    // 创建一条“橡皮擦轨迹”
+                    _currentStroke = new Stroke
+                    {
+                        Color = Colors.White, // 混合模式会忽略颜色
+                        Size = (float)EraserSize,
+                        IsEraserStroke = true // 标记为橡皮
+                    };
+                    _currentStroke.Points.Add(vecPt);
+                    _allStrokes.Add(_currentStroke);
+                    MyCanvas.Invalidate();
+                }
+                else // 模式 B：整根删除 
+                {
+                    TryErase(vecPt);
+                }
             }
             else
             {
@@ -172,20 +197,54 @@ namespace Painto
             if (_computerMode) return;
 
             var pt = e.GetCurrentPoint(MyCanvas).Position;
+            _currentCursorPos = new Vector2((float)pt.X, (float)pt.Y);
+            _isHovering = true;
+
+            if (_isEraserMode && IsPixelEraserMode)
+            {
+                MyCanvas.Invalidate();
+            }
+
+
             var vecPt = new Vector2((float)pt.X, (float)pt.Y);
 
             if (e.GetCurrentPoint(MyCanvas).Properties.IsLeftButtonPressed)
             {
+                bool hasUpdates = false;
                 if (_isEraserMode)
                 {
-                    TryErase(vecPt);
+                    if (IsPixelEraserMode)
+                    {
+                        // 模式 A：真实橡皮擦 -> 像画笔一样记录轨迹
+                        if (_currentStroke != null)
+                        {
+                            _currentStroke.Points.Add(vecPt);
+                            hasUpdates = true;
+                        }
+                    }
+                    else
+                    {
+                        // 模式 B：整根删除 -> 检测碰撞
+                        if (TryErase(vecPt)) hasUpdates = true;
+                    }
                 }
                 else if (_currentStroke != null)
                 {
                     _currentStroke.Points.Add(vecPt);
+                    hasUpdates = true;
                     MyCanvas.Invalidate();
                 }
+
+                if (hasUpdates) MyCanvas.Invalidate();
             }
+
+            
+        }
+
+        private void MyCanvas_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            _isHovering = false;
+            MyCanvas.Invalidate();
         }
 
         private void MyCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
@@ -210,68 +269,197 @@ namespace Painto
             _currentStroke = null;
         }
 
+        // ToolBarWindow.xaml.cs
+
+        // ToolBarWindow.xaml.cs
+
         private void MyCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
+            // 性能检查
+            if (_allStrokes.Count == 0 && _currentStroke == null) return;
+
+            // 获取当前画布大小
+            var currentSize = sender.Size;
+            var canvasRect = new Windows.Foundation.Rect(0, 0, currentSize.Width, currentSize.Height);
+
             using (var style = new Microsoft.Graphics.Canvas.Geometry.CanvasStrokeStyle())
             {
                 style.StartCap = CanvasCapStyle.Round;
                 style.EndCap = CanvasCapStyle.Round;
                 style.LineJoin = CanvasLineJoin.Round;
 
-                foreach (var stroke in _allStrokes)
+                // 创建一个主图层 (用于隔离混合模式，防止橡皮擦把背景擦黑)
+                using (var layer = args.DrawingSession.CreateLayer(1.0f))
                 {
-                    // 如果有缓存的几何体（之前的笔画），直接画！极快！不费内存！
-                    if (stroke.CachedGeometry != null)
+                    // 绘制所有历史笔画
+                    foreach (var stroke in _allStrokes)
                     {
-                        args.DrawingSession.DrawGeometry(stroke.CachedGeometry, stroke.Color, stroke.Size, style);
-                    }
-                    // 如果没有缓存（当前正在画的这一笔），才动态计算
-                    else if (stroke.Points.Count > 1)
-                    {
-                        // 这里只计算当前正在画的一笔，负担极小
-                        using (var builder = new CanvasPathBuilder(sender))
+                        if (stroke.IsEraserStroke)
                         {
-                            builder.BeginFigure(stroke.Points[0]);
-                            for (int i = 1; i < stroke.Points.Count; i++)
+                            // 使用 CanvasCommandList 来实现橡皮擦
+                            using (var cl = new CanvasCommandList(sender))
                             {
-                                builder.AddLine(stroke.Points[i]);
-                            }
-                            builder.EndFigure(CanvasFigureLoop.Open);
-                            using (var geometry = CanvasGeometry.CreatePath(builder))
-                            {
-                                args.DrawingSession.DrawGeometry(geometry, stroke.Color, stroke.Size, style);
+                                // 笔画先画在命令列表里
+                                using (var clds = cl.CreateDrawingSession())
+                                {
+                                    DrawSingleStroke(sender, clds, stroke, style);
+                                }
+
+                                // 把命令列表以 DestinationOut (扣除) 模式画到屏幕上
+                                // 参数：图像(cl), 目标区域(rect), 源区域(rect), 透明度(1), 插值(Linear), 混合模式(DestinationOut)
+                                args.DrawingSession.DrawImage(cl, canvasRect, canvasRect, 1.0f, CanvasImageInterpolation.Linear, CanvasComposite.DestinationOut);
                             }
                         }
+                        else
+                        {
+                            // 普通笔画直接画
+                            DrawSingleStroke(sender, args.DrawingSession, stroke, style);
+                        }
                     }
-                    else if (stroke.Points.Count == 1)
+
+                    // 绘制当前正在画的
+                    if (_currentStroke != null && _currentStroke.Points.Count > 0)
                     {
-                        args.DrawingSession.FillCircle(stroke.Points[0], stroke.Size / 2, stroke.Color);
+                        if (_currentStroke.IsEraserStroke)
+                        {
+                            // 同样处理当前橡皮擦
+                            using (var cl = new CanvasCommandList(sender))
+                            {
+                                using (var clds = cl.CreateDrawingSession())
+                                {
+                                    DrawSingleStroke(sender, clds, _currentStroke, style);
+                                }
+                                args.DrawingSession.DrawImage(cl, canvasRect, canvasRect, 1.0f, CanvasImageInterpolation.Linear, CanvasComposite.DestinationOut);
+                            }
+                        }
+                        else
+                        {
+                            DrawSingleStroke(sender, args.DrawingSession, _currentStroke, style);
+                        }
                     }
+                }
+
+                if (_isEraserMode && IsPixelEraserMode && _isHovering)
+                {
+                    // 定义颜色
+                    Color innerColor = Colors.Black;
+                    Color outerColor = Colors.White;
+
+                    // 变色逻辑: 如果当前正在进行擦除操作 (鼠标按下且产生了 Stroke)
+                    if (_currentStroke != null)
+                    {
+                        // 按下时变色：变成红色
+                        innerColor = Colors.Red;
+                        outerColor = Colors.White;
+                    }
+
+                    // 绘制光标
+                    float radius = (float)EraserSize / 2.0f;
+
+                    // 画一个内圈 (颜色变化)
+                    args.DrawingSession.DrawCircle(_currentCursorPos, radius, innerColor, 1.0f);
+
+                    // 画一个外圈 (保持白色，确保在深色背景可见)
+                    // 半径稍微大一点点，形成描边效果
+                    args.DrawingSession.DrawCircle(_currentCursorPos, radius + 1.0f, outerColor, 1.0f);
                 }
             }
         }
 
-        private void TryErase(Vector2 eraserPos)
+        private void DrawSingleStroke(CanvasControl sender, CanvasDrawingSession ds, Stroke stroke, CanvasStrokeStyle style)
         {
-            bool needsRedraw = false;
-            for (int i = _allStrokes.Count - 1; i >= 0; i--)
+            if (stroke.CachedGeometry != null)
             {
-                var stroke = _allStrokes[i];
-                foreach (var p in stroke.Points)
+                ds.DrawGeometry(stroke.CachedGeometry, stroke.Color, stroke.Size, style);
+            }
+            else if (stroke.Points.Count > 1)
+            {
+                using (var builder = new CanvasPathBuilder(sender))
                 {
-                    if (Vector2.Distance(p, eraserPos) < 20)
+                    builder.BeginFigure(stroke.Points[0]);
+                    for (int i = 1; i < stroke.Points.Count; i++)
                     {
-                        _allStrokes.RemoveAt(i);
-                        needsRedraw = true;
-                        break;
+                        builder.AddLine(stroke.Points[i]);
+                    }
+                    builder.EndFigure(CanvasFigureLoop.Open);
+
+                    using (var geometry = CanvasGeometry.CreatePath(builder))
+                    {
+                        ds.DrawGeometry(geometry, stroke.Color, stroke.Size, style);
                     }
                 }
             }
-            if (needsRedraw)
+            else if (stroke.Points.Count == 1)
             {
-        }
-                MyCanvas.Invalidate();
+                ds.FillCircle(stroke.Points[0], stroke.Size / 2, stroke.Color);
             }
+        }
+
+        // 返回 bool 表示是否发生了擦除
+        private bool TryErase(Vector2 eraserPos)
+        {
+            bool erased = false;
+            // 使用设置的大小 (半径 = 直径 / 2)
+            float eraserRadius = (float)EraserSize / 2.0f;
+
+            // 倒序遍历
+            for (int i = _allStrokes.Count - 1; i >= 0; i--)
+            {
+                var stroke = _allStrokes[i];
+                // 不要删除橡皮擦自己的轨迹
+                if (stroke.IsEraserStroke) continue;
+                bool hit = false;
+
+                // 如果点太少，直接回退到点检测
+                if (stroke.Points.Count < 2)
+                {
+                    if (stroke.Points.Count == 1 && Vector2.Distance(stroke.Points[0], eraserPos) < eraserRadius)
+                    {
+                        hit = true;
+                    }
+                }
+                else
+                {
+                    // 检测橡皮擦是否碰到任何一段“线段”
+                    for (int j = 0; j < stroke.Points.Count - 1; j++)
+                    {
+                        var p1 = stroke.Points[j];
+                        var p2 = stroke.Points[j + 1];
+
+                        // 计算点到线段的距离
+                        if (GetDistanceToSegment(eraserPos, p1, p2) < eraserRadius)
+                        {
+                            hit = true;
+                            break; // 只要碰到一段，整根线就删掉
+                        }
+                    }
+                }
+
+                if (hit)
+                {
+                    // 记得释放资源
+                    stroke.CachedGeometry?.Dispose();
+                    _allStrokes.RemoveAt(i);
+                    erased = true;
+                    // 如果只想擦一根，这里可以 break；如果想一次擦多根，就继续
+                    break;
+                }
+            }
+            return erased;
+        }
+
+        // 计算点 p 到线段 ab 的最短距离
+        private float GetDistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 pa = p - a;
+            Vector2 ba = b - a;
+
+            // 计算投影比例 h，并限制在 [0, 1] 范围内（确保垂足在线段上）
+            float h = Math.Clamp(Vector2.Dot(pa, ba) / Vector2.Dot(ba, ba), 0, 1);
+
+            // 计算距离向量长度
+            return (pa - ba * h).Length();
+        }
 
         public void DeleteAllInk()
         {

@@ -44,6 +44,19 @@
                         <ComboBoxItem x:Uid="Language_Chinese" Tag="zh-CN" />
                     </ComboBox>
                 </controls:SettingsCard>
+                <controls:SettingsCard Header="Realistic Eraser" Description="Erase parts of lines instead of whole strokes">
+                    <ToggleSwitch x:Name="EraserModeSwitch" Toggled="EraserModeSwitch_Toggled" />
+                </controls:SettingsCard>
+                <controls:SettingsCard Header="Eraser Size" Description="Adjust the size of the eraser">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{x:Bind EraserSizeSlider.Value, Mode=OneWay}" VerticalAlignment="Center" Width="30"/>
+                        <Slider x:Name="EraserSizeSlider" 
+                                Minimum="5" 
+                                Maximum="100" 
+                                Width="200" 
+                                ValueChanged="EraserSizeSlider_ValueChanged"/>
+                    </StackPanel>
+                </controls:SettingsCard>
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
                    x:Name="MonitorDisplayHeader"
                    x:Uid="MonitorHeader" />
