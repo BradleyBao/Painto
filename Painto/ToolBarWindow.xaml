@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:winuiex="using:WinUIEx"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     
     mc:Ignorable="d">
 
@@ -20,13 +21,19 @@
             <!--<RowDefinition Height="50"/>-->
         </Grid.RowDefinitions>
 
-        <!--<Grid.ColumnDefinitions>
-        <ColumnDefinition Width="*"/>
-        <ColumnDefinition Width="20"/>
-    </Grid.ColumnDefinitions>-->
-
         <!--<Canvas Grid.Row="0" Grid.Column="0" x:Name="DrawingCanvas" Background="Yellow" PointerPressed="Canvas_PointerPressed" PointerMoved="Canvas_PointerMoved" PointerReleased="Canvas_PointerReleased"/>-->
-        <Canvas x:Name="DrawingCanvas" Background="Transparent" PointerPressed="DrawingCanvas_PointerPressed" PointerMoved="DrawingCanvas_PointerMoved" PointerReleased="DrawingCanvas_PointerReleased"/>
+        
+        <!--Old Polyline Logic with Canvas-->
+        <!--<Canvas x:Name="DrawingCanvas" Background="Transparent" PointerPressed="DrawingCanvas_PointerPressed" PointerMoved="DrawingCanvas_PointerMoved" PointerReleased="DrawingCanvas_PointerReleased"/>-->
+
+        <!-- Use Win2D CanvasControl for better performance -->
+        <canvas:CanvasControl x:Name="MyCanvas" 
+                              Background="Transparent"
+                              ManipulationMode="None"
+                              Draw="MyCanvas_Draw"
+                              PointerPressed="MyCanvas_PointerPressed"
+                              PointerMoved="MyCanvas_PointerMoved"
+                              PointerReleased="MyCanvas_PointerReleased"/>
     </Grid>
     
     

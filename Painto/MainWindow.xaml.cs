@@ -184,7 +184,7 @@ namespace Painto
             selectedItem?.Focus(FocusState.Programmatic);
             ToolBarWindow._computerMode = false;
             ToolBarWindow._isEraserMode = false;
-            ToolBarWindow.LockScreen();
+            ToolBarWindow.UnlockScreen();
         }
 
         [DllImport("User32.dll")]
@@ -245,7 +245,7 @@ namespace Painto
             var selectedItem = (GridViewItem)MajorFunctionControl.ContainerFromIndex(0);
             selectedItem?.Focus(FocusState.Programmatic);
             ToolBarWindow._computerMode = true;
-            ToolBarWindow.UnlockScreen();
+            ToolBarWindow.LockScreen();
             
         }
 
@@ -566,7 +566,7 @@ namespace Painto
                         ToolBarWindow._isEraserMode = true;
                         if (ToolBarWindow._computerMode)
                         {
-                            ToolBarWindow.LockScreen();
+                            ToolBarWindow.UnlockScreen();
                             ToolBarWindow._computerMode = false;
                         }
                         break;
@@ -575,7 +575,7 @@ namespace Painto
                         ToolBarWindow._isEraserMode = false;
                         if (ToolBarWindow._computerMode)
                         {
-                            ToolBarWindow.LockScreen();
+                            ToolBarWindow.UnlockScreen();
                             ToolBarWindow._computerMode = false;
                         }
                         
@@ -585,7 +585,7 @@ namespace Painto
                         if (!ToolBarWindow._computerMode)
                         {
                             ToolBarWindow._computerMode = true;
-                            ToolBarWindow.UnlockScreen();
+                            ToolBarWindow.LockScreen();
                         }
                         
                         break;
@@ -640,7 +640,7 @@ namespace Painto
             var selectedItem = (GridViewItem)MajorFunctionControl.ContainerFromIndex(0);
             selectedItem?.Focus(FocusState.Programmatic);
             ToolBarWindow._computerMode = true;
-            ToolBarWindow.UnlockScreen();
+            ToolBarWindow.LockScreen();
 
             if (_settings != null)
             {
@@ -893,9 +893,10 @@ namespace Painto
         }
 
         // 辅助方法：切换模式（从你之前的代码整理）
+        // MainWindow.xaml.cs
+
         public void SwitchToMode(string tag)
         {
-            // 需要在 UI 线程执行，因为 WM_HOTKEY 可能来自系统调用
             this.DispatcherQueue.TryEnqueue(() =>
             {
                 int index = 0;
@@ -905,36 +906,40 @@ namespace Painto
                     case "DrawMode": index = 1; break;
                     case "Eraser": index = 2; break;
                 }
-
                 MajorFunctionControl.SelectedIndex = index;
 
-                // 执行之前的 ItemClick 逻辑
                 switch (tag)
                 {
-                    case "Eraser":
-                        ToolBarWindow._isEraserMode = true;
-                        if (ToolBarWindow._computerMode)
+                    case "ComputerMode":
+                        if (!ToolBarWindow._computerMode)
                         {
-                            ToolBarWindow.LockScreen();
-                            ToolBarWindow._computerMode = false;
+                            // 电脑模式：需要穿透 -> 调用 LockScreen (添加透明属性)
+                            ToolBarWindow.LockScreen(); // [修正] 原来是 Unlock
+                            ToolBarWindow._computerMode = true;
+
+                            // [建议] 可以在这里禁用 Win2D 输入，防止干扰
+                            // _toolbarWindow.SetInputEnabled(false); 
                         }
                         break;
 
                     case "DrawMode":
-                        ToolBarWindow._isEraserMode = false;
+                        // 绘图模式：需要拦截 -> 调用 UnlockScreen (移除透明属性)
                         if (ToolBarWindow._computerMode)
                         {
-                            ToolBarWindow.LockScreen();
+                            ToolBarWindow.UnlockScreen(); // [修正] 原来是 Lock
                             ToolBarWindow._computerMode = false;
                         }
+                        ToolBarWindow._isEraserMode = false;
                         break;
 
-                    case "ComputerMode":
-                        if (!ToolBarWindow._computerMode)
+                    case "Eraser":
+                        // 橡皮擦：需要拦截 -> 调用 UnlockScreen (移除透明属性)
+                        if (ToolBarWindow._computerMode)
                         {
-                            ToolBarWindow._computerMode = true;
-                            ToolBarWindow.UnlockScreen();
+                            ToolBarWindow.UnlockScreen(); // Lock
+                            ToolBarWindow._computerMode = false;
                         }
+                        ToolBarWindow._isEraserMode = true;
                         break;
                 }
             });

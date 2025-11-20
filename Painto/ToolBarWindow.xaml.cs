@@ -1,57 +1,45 @@
-﻿using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-using Windows.UI.Input;
-using Painto.Modules;
-using System;
+using Microsoft.Graphics.Canvas.UI.Xaml;
+using Microsoft.Graphics.Canvas.Geometry;
+using System.Numerics;
+using Windows.UI;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
+using System;
+using Microsoft.UI.Windowing;
+using Microsoft.UI;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-using WinUIEx;
-using Windows.Devices.Input;
-using Windows.UI.Input.Inking;
-using Windows.UI.Core;
-using Windows.Graphics;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+using WinRT.Interop;
 
 namespace Painto
 {
-    /// <summary>
-    /// An empty window that can be used on its own or navigated to within a Frame.
-    /// </summary>
     public sealed partial class ToolBarWindow : Window
     {
+        // 笔画数据结构
+        private class Stroke
+        {
+            public List<Vector2> Points { get; set; } = new List<Vector2>();
+            public Color Color { get; set; }
+            public float Size { get; set; }
+            public CanvasGeometry CachedGeometry { get; set; }
+        }
 
-        private Polyline _currentLine;
-        public static bool _isDrawingMode = false;
+        private List<Stroke> _allStrokes = new List<Stroke>();
+        private Stroke _currentStroke;
+
+        // 状态变量
         public static bool _isEraserMode = false;
         public static bool _computerMode = false;
-        private const double EraserRadius = 15;
 
-        // Pen Attribution 
-        public static Windows.UI.Color penColor = Colors.Black;
-        public static int penThickness = 2;
-        
+        // 笔刷属性 (静态变量供外部修改)
+        public static Color penColor = Colors.Black;
+        public static int penThickness = 5;
 
-        // Transparent + Click Through 
+        // 窗口穿透相关常量
         private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_LAYERED = 0x00080000; // 确保窗口分层，穿透必须
         private const int GWL_EXSTYLE = -20;
         private const int GWL_STYLE = -16;
-
         private const int WS_CAPTION = 0x00C00000;
         private const int WS_SYSMENU = 0x00080000;
         private const int WS_THICKFRAME = 0x00040000;
@@ -60,297 +48,280 @@ namespace Painto
         private const int WS_BORDER = 0x00800000;
         private const int WS_DLGFRAME = 0x00400000;
 
-        private const int DWMWA_NCRENDERING_POLICY = 2;
-        private const int DWMWA_TRANSITIONS_FORCEDISABLED = 3;
-        private const int DWMNCRP_DISABLED = 1;
+        // SetWindowPos Flags
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_FRAMECHANGED = 0x0020;
 
-        [DllImport("user32.dll")]
-        private static extern int GetWindowLong(IntPtr hwnd, int index);
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+        // --- P/Invoke 定义 (修复 64位 兼容性) ---
+        [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+        private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
 
-        [DllImport("dwmapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+        private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        private static IntPtr GetWindowLong(IntPtr hWnd, int nIndex)
+        {
+            if (IntPtr.Size == 8) return GetWindowLongPtr64(hWnd, nIndex);
+            else return GetWindowLongPtr32(hWnd, nIndex);
+        }
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+        private static extern IntPtr SetWindowLongPtr32(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        private static IntPtr SetWindowLong(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            if (IntPtr.Size == 8) return SetWindowLongPtr64(hWnd, nIndex, dwNewLong);
+            else return SetWindowLongPtr32(hWnd, nIndex, dwNewLong);
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
         internal static IntPtr hwnd;
 
-        IReadOnlyList<PointerDevice> _devices;
-        bool _isPenSupported;
+        // 保存 Canvas 引用
+        private static Microsoft.Graphics.Canvas.UI.Xaml.CanvasControl _canvasRef;
 
         public ToolBarWindow()
         {
             this.InitializeComponent();
-            hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            int extendedStyle = GetWindowLong(hwnd, GWL_STYLE);
+            hwnd = WindowNative.GetWindowHandle(this);
+            _canvasRef = MyCanvas; // 获取引用
+
+            // 初始化窗口样式
+            long style = GetWindowLong(hwnd, GWL_STYLE).ToInt64();
+            style &= ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_BORDER | WS_DLGFRAME);
+            SetWindowLong(hwnd, GWL_STYLE, (IntPtr)style);
+
             WinUIEx.HwndExtensions.SetAlwaysOnTop(hwnd, true);
-            // ! IMPORTANT Click Through
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
-            //_ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
-            this.Title = "PaintoDrawWindow";
-            this.AppWindow.SetIcon("Assets/painto_logo.ico");
-            RemoveTitleBarAndBorder(hwnd);
-            RemoveWindowShadow(hwnd);
-            EnterFullScreenMode();
 
-            _devices =  PointerDevice.GetPointerDevices();
-            _isPenSupported = _devices.Any(pd => pd.PointerDeviceType == PointerDeviceType.Pen);
-
+            // 初始为穿透模式
             LockScreen();
 
-            //this.AppWindow.Move(new Windows.Graphics.PointInt32(0, 0));
+            // 全屏
+            //EnterFullScreenMode();
+        }
+
+        // 窗口辅助方法
+
+        public static void UnlockScreen()
+        {
+            // ! 画图模式
+            // 移除 WS_EX_TRANSPARENT -> 鼠标拦截 (画图)
+            long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
+            SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle & ~WS_EX_TRANSPARENT));
+
+            // 强制刷新窗口框架，确保样式立即生效
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            // 开启 Canvas 命中测试
+            if (_canvasRef != null) _canvasRef.IsHitTestVisible = true;
+        }
+
+        public static void LockScreen()
+        {
+            // ! 桌面模式
+            // 添加 WS_EX_TRANSPARENT -> 鼠标穿透 (桌面)
+            // 确保 WS_EX_LAYERED 存在
+            long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
+            SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED));
+
+            // 强制刷新窗口框架
+            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            // 禁用 Canvas 命中测试，防止 Win2D 抢占输入
+            if (_canvasRef != null) _canvasRef.IsHitTestVisible = false;
+        }
+
+        // Win2D 绘图逻辑
+
+        private void MyCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (_computerMode) return;
+
+            MyCanvas.CapturePointer(e.Pointer);
+
+            var pt = e.GetCurrentPoint(MyCanvas).Position;
+            var vecPt = new Vector2((float)pt.X, (float)pt.Y);
+
+            if (_isEraserMode)
+            {
+                TryErase(vecPt);
+            }
+            else
+            {
+                _currentStroke = new Stroke
+                {
+                    Color = penColor,
+                    Size = (float)penThickness
+                };
+                _currentStroke.Points.Add(vecPt);
+                _allStrokes.Add(_currentStroke);
+                MyCanvas.Invalidate();
+            }
+        }
+
+        private void MyCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (_computerMode) return;
+
+            var pt = e.GetCurrentPoint(MyCanvas).Position;
+            var vecPt = new Vector2((float)pt.X, (float)pt.Y);
+
+            if (e.GetCurrentPoint(MyCanvas).Properties.IsLeftButtonPressed)
+            {
+                if (_isEraserMode)
+                {
+                    TryErase(vecPt);
+                }
+                else if (_currentStroke != null)
+                {
+                    _currentStroke.Points.Add(vecPt);
+                    MyCanvas.Invalidate();
+                }
+            }
+        }
+
+        private void MyCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (_currentStroke != null && _currentStroke.Points.Count > 1)
+            {
+                // 画完一笔后，立即生成几何体并缓存
+                using (var builder = new CanvasPathBuilder(MyCanvas))
+                {
+                    builder.BeginFigure(_currentStroke.Points[0]);
+                    for (int i = 1; i < _currentStroke.Points.Count; i++)
+                    {
+                        builder.AddLine(_currentStroke.Points[i]);
+                    }
+                    builder.EndFigure(CanvasFigureLoop.Open);
+
+                    // 保存到 Stroke 对象中
+                    _currentStroke.CachedGeometry = CanvasGeometry.CreatePath(builder);
+                }
+            }
+            MyCanvas.ReleasePointerCapture(e.Pointer);
+            _currentStroke = null;
+        }
+
+        private void MyCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+        {
+            using (var style = new Microsoft.Graphics.Canvas.Geometry.CanvasStrokeStyle())
+            {
+                style.StartCap = CanvasCapStyle.Round;
+                style.EndCap = CanvasCapStyle.Round;
+                style.LineJoin = CanvasLineJoin.Round;
+
+                foreach (var stroke in _allStrokes)
+                {
+                    // 如果有缓存的几何体（之前的笔画），直接画！极快！不费内存！
+                    if (stroke.CachedGeometry != null)
+                    {
+                        args.DrawingSession.DrawGeometry(stroke.CachedGeometry, stroke.Color, stroke.Size, style);
+                    }
+                    // 如果没有缓存（当前正在画的这一笔），才动态计算
+                    else if (stroke.Points.Count > 1)
+                    {
+                        // 这里只计算当前正在画的一笔，负担极小
+                        using (var builder = new CanvasPathBuilder(sender))
+                        {
+                            builder.BeginFigure(stroke.Points[0]);
+                            for (int i = 1; i < stroke.Points.Count; i++)
+                            {
+                                builder.AddLine(stroke.Points[i]);
+                            }
+                            builder.EndFigure(CanvasFigureLoop.Open);
+                            using (var geometry = CanvasGeometry.CreatePath(builder))
+                            {
+                                args.DrawingSession.DrawGeometry(geometry, stroke.Color, stroke.Size, style);
+                            }
+                        }
+                    }
+                    else if (stroke.Points.Count == 1)
+                    {
+                        args.DrawingSession.FillCircle(stroke.Points[0], stroke.Size / 2, stroke.Color);
+                    }
+                }
+            }
+        }
+
+        private void TryErase(Vector2 eraserPos)
+        {
+            bool needsRedraw = false;
+            for (int i = _allStrokes.Count - 1; i >= 0; i--)
+            {
+                var stroke = _allStrokes[i];
+                foreach (var p in stroke.Points)
+                {
+                    if (Vector2.Distance(p, eraserPos) < 20)
+                    {
+                        _allStrokes.RemoveAt(i);
+                        needsRedraw = true;
+                        break;
+                    }
+                }
+            }
+            if (needsRedraw)
+            {
+        }
+                MyCanvas.Invalidate();
+            }
+
+        public void DeleteAllInk()
+        {
+            // 释放所有缓存
+            foreach (var stroke in _allStrokes)
+            {
+                stroke.CachedGeometry?.Dispose();
+            }
+            _allStrokes.Clear();
+            MyCanvas.Invalidate();
         }
 
         public void MoveViaMonitor(int indexMonitor)
         {
             var displays = DisplayArea.FindAll();
-            DisplayArea display = displays[indexMonitor];
-            var displayArea = display.WorkArea;
-            int screenHeight = displayArea.Height;
-            int screenWidth = displayArea.Width;
-            int screenX = displayArea.X;
-            int screenY = displayArea.Y;
-            // Old Method
-            //var newPos = new PointInt32(screenX, screenY);
-            //// 移动窗口
-            //this.AppWindow.Move(newPos);
+            if (indexMonitor >= displays.Count) indexMonitor = 0;
 
-            // New Method
-            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(screenX, screenY, screenWidth, screenHeight));
-            EnterFullScreenMode();
+            DisplayArea display = displays[indexMonitor];
+            var area = display.WorkArea;
+            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X, area.Y, area.Width, area.Height));
         }
 
         public void SetFullscreenAcrossAllDisplays()
         {
             var displays = DisplayArea.FindAll();
 
-            int totalHeight = 0;
-            int totalWidth = 0;
-            int screenX = 0;
-            int screenY = 0;
+            int minX = int.MaxValue, minY = int.MaxValue;
+            int maxX = int.MinValue, maxY = int.MinValue;
 
-            for (int i = 0; i < displays.Count; i++)
+            for (int i =0; i < displays.Count; i++)
             {
                 var display = displays[i];
-                var displayArea = display.WorkArea;
-                totalWidth += displayArea.Width;
-                screenX = Math.Min(screenX, displayArea.X);
-                screenY = Math.Min(screenY, displayArea.Y);
-                totalHeight = Math.Max(totalHeight, displayArea.Height);
+                // 改用 OuterBounds (包含任务栏区域)
+                var bounds = display.OuterBounds;
+
+                if (bounds.X < minX) minX = bounds.X;
+                if (bounds.Y < minY) minY = bounds.Y;
+                if (bounds.X + bounds.Width > maxX) maxX = bounds.X + bounds.Width;
+                if (bounds.Y + bounds.Height > maxY) maxY = bounds.Y + bounds.Height;
             }
-            ExitFullScreenMode();
-            //EnterFullScreenMode();
 
-
-            hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            int extendedStyle = GetWindowLong(hwnd, GWL_STYLE);
-            WinUIEx.HwndExtensions.SetAlwaysOnTop(hwnd, true);
-            // ! IMPORTANT Click Through
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
-            //_ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
-
-
-            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(screenX, screenY, totalWidth, totalHeight));
-            LockScreen();
-            UnlockScreen();
-            
+            // 窗口会变成一个跨越所有屏幕的巨大矩形
+            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(minX, minY, maxX - minX, maxY - minY));
         }
 
-        private const int WS_EX_NOACTIVATE = 0x08000000;
-        private const int WS_EX_TOOLWINDOW = 0x00000080;
-
-        private Microsoft.UI.Windowing.AppWindow GetAppWindowForCurrentWindow()
-        {
-            WindowId myWndId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
-            return Microsoft.UI.Windowing.AppWindow.GetFromWindowId(myWndId);
-        }
-
-        // Fullscreen 
         private void EnterFullScreenMode()
         {
-            var m_appWindow = GetAppWindowForCurrentWindow();
-            m_appWindow.SetPresenter(AppWindowPresenterKind.FullScreen);
+            var id = Win32Interop.GetWindowIdFromWindow(hwnd);
+            var appWin = AppWindow.GetFromWindowId(id);
+            appWin.SetPresenter(AppWindowPresenterKind.FullScreen);
         }
-
-        private void ExitFullScreenMode()
-        {
-            var m_appWindow = GetAppWindowForCurrentWindow();
-            m_appWindow.SetPresenter(AppWindowPresenterKind.Default);
-        }
-
-
-        private void RemoveTitleBarAndBorder(IntPtr hwnd)
-        {
-            int style = GetWindowLong(hwnd, GWL_STYLE);
-            style &= ~(WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_BORDER | WS_DLGFRAME);
-            SetWindowLong(hwnd, GWL_STYLE, style);
-        }
-
-        private void RemoveWindowShadow(IntPtr hwnd)
-        {
-            int value = DWMNCRP_DISABLED;
-            DwmSetWindowAttribute(hwnd, DWMWA_NCRENDERING_POLICY, ref value, sizeof(int));
-
-            value = 1;
-            DwmSetWindowAttribute(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, ref value, sizeof(int));
-        }
-
-        // Draw
-        // Draw 
-
-        public Windows.UI.Color ConvertHexToColor(string hex)
-        {
-            // 去掉开头的 '#' 字符
-            hex = hex.Replace("#", string.Empty);
-
-            byte a = 255; // 默认为不透明
-            byte r, g, b;
-
-            if (hex.Length == 8) // 如果长度为8，表示ARGB
-            {
-                a = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                r = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                g = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-                b = byte.Parse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber);
-            }
-            else // 默认为RGB
-            {
-                r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-            }
-
-            return Windows.UI.Color.FromArgb(a, r, g, b);
-        }
-
-        private void DrawingCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            var point = e.GetCurrentPoint(DrawingCanvas).Position;
-
-            if (_computerMode)
-                return;
-
-            if (e.GetCurrentPoint(DrawingCanvas).Properties.IsLeftButtonPressed)
-            {
-                if (!_isEraserMode)
-                {
-                    _currentLine = new Polyline
-                    {
-                        Stroke = new SolidColorBrush(penColor),
-                        StrokeThickness = penThickness,
-                        StrokeLineJoin = PenLineJoin.Round,
-                        StrokeStartLineCap = PenLineCap.Round,
-                        StrokeEndLineCap = PenLineCap.Round
-                    };
-                    DrawingCanvas.Children.Add(_currentLine);
-                    _isDrawingMode = true;
-                    _currentLine.Points.Add(point);
-                }
-                else
-                {
-                    // 在橡皮擦模式下，开始擦除
-                    _isDrawingMode = true;
-                    RemoveIntersectingLines(point);
-                }
-            }
-        }
-
-        private void DrawingCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
-        {
-            var point = e.GetCurrentPoint(DrawingCanvas).Position;
-
-            if (_computerMode || !_isDrawingMode)
-                return;
-
-            if (e.GetCurrentPoint(DrawingCanvas).Properties.IsLeftButtonPressed)
-            {
-                if (!_isEraserMode)
-                {
-                    // 继续绘图
-                    var lastPoint = _currentLine.Points.LastOrDefault();
-                    if (Distance(lastPoint, point) > 2.0)
-                    {
-                        _currentLine.Points.Add(point);
-                    }
-                }
-                else
-                {
-                    // 继续擦除
-                    RemoveIntersectingLines(point);
-                }
-            }
-        }
-
-        private void DrawingCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            if (e.GetCurrentPoint(DrawingCanvas).Properties.IsLeftButtonPressed)
-            {
-                _isDrawingMode = false;
-            }
-        }
-
-        private double Distance(Point p1, Point p2)
-        {
-            return Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-        }
-
-        public void DeleteAllInk()
-        {
-            DrawingCanvas.Children.Clear();
-        }
-
-
-
-        private void RemoveIntersectingLines(Point position)
-        {
-            var linesToRemove = new List<Polyline>();
-            foreach (var child in DrawingCanvas.Children.OfType<Polyline>())
-            {
-                if (IsLineIntersectingWithEraser(child, position))
-                {
-                    linesToRemove.Add(child);
-                }
-            }
-
-            foreach (var line in linesToRemove)
-            {
-                DrawingCanvas.Children.Remove(line);
-            }
-        }
-
-        private bool IsLineIntersectingWithEraser(Polyline line, Point eraserPosition)
-        {
-            foreach (var point in line.Points)
-            {
-                if (IsPointInEraserArea(point, eraserPosition))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private bool IsPointInEraserArea(Point point, Point eraserPosition)
-        {
-            var distance = Math.Sqrt(Math.Pow(point.X - eraserPosition.X, 2) + Math.Pow(point.Y - eraserPosition.Y, 2));
-            return distance < EraserRadius;
-        }
-
-        public static void UnlockScreen()
-        {
-            
-            int extendedStyle = GetWindowLong(hwnd, GWL_STYLE);
-            // Click Through 
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | ~WS_EX_TRANSPARENT);
-        }
-
-        public static void LockScreen()
-        {
-            int extendedStyle = GetWindowLong(hwnd, GWL_STYLE);
-            // Not Click Through
-            _ = SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
-        }
-
     }
 }
