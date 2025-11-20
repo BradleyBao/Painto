@@ -34,6 +34,7 @@
             <StackPanel Spacing="4">
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
                    Text="General"
+                    Margin="0,10,0,4"
                    x:Name="GeneralHeader"
                    x:Uid="GeneralHeader" />
                 <controls:SettingsCard x:Uid="LanguageSettingCard"
@@ -44,21 +45,24 @@
                         <ComboBoxItem x:Uid="Language_Chinese" Tag="zh-CN" />
                     </ComboBox>
                 </controls:SettingsCard>
-                <controls:SettingsCard Header="Realistic Eraser" Description="Erase parts of lines instead of whole strokes">
+                <controls:SettingsCard x:Uid="RealisticEraserCard" 
+                       HeaderIcon="{ui:FontIcon Glyph=&#xE75C;}">
                     <ToggleSwitch x:Name="EraserModeSwitch" Toggled="EraserModeSwitch_Toggled" />
                 </controls:SettingsCard>
-                <controls:SettingsCard Header="Eraser Size" Description="Adjust the size of the eraser">
+                <controls:SettingsCard x:Uid="EraserSizeCard" 
+                       HeaderIcon="{ui:FontIcon Glyph=&#xE70F;}">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="{x:Bind EraserSizeSlider.Value, Mode=OneWay}" VerticalAlignment="Center" Width="30"/>
                         <Slider x:Name="EraserSizeSlider" 
                                 Minimum="5" 
                                 Maximum="100" 
-                                Width="200" 
-                                ValueChanged="EraserSizeSlider_ValueChanged"/>
+                                Value="30" 
+                                Width="200" />
                     </StackPanel>
                 </controls:SettingsCard>
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
                    x:Name="MonitorDisplayHeader"
+                    Margin="0,10,0,4"
                    x:Uid="MonitorHeader" />
 
                 <controls:SettingsCard HorizontalContentAlignment="Left"
@@ -100,6 +104,7 @@
                 </controls:SettingsCard>
 
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
+                   Margin="0,10,0,4"
                    x:Name="ToolbarUIHeader"
                    x:Uid="ToolbarUIHeader" />
 
@@ -109,6 +114,7 @@
                 </controls:SettingsCard>
 
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}"
+                           Margin="0,10,0,4"
                            x:Name="ShortcutsHeader"
                            x:Uid="ShortcutsHeader" />
 

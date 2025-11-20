@@ -150,6 +150,12 @@
   <data name="EraserModeCard.Header" xml:space="preserve">
     <value>橡皮擦模式</value>
   </data>
+  <data name="EraserSizeCard.Description" xml:space="preserve">
+    <value>调整橡皮擦的直径大小。</value>
+  </data>
+  <data name="EraserSizeCard.Header" xml:space="preserve">
+    <value>橡皮擦大小</value>
+  </data>
   <data name="ErrorText" xml:space="preserve">
     <value>错误</value>
   </data>
@@ -158,6 +164,9 @@
   </data>
   <data name="FullMonitorCard.Header" xml:space="preserve">
     <value>全屏绘图区域</value>
+  </data>
+  <data name="GeneralHeader.Text" xml:space="preserve">
+    <value>常规</value>
   </data>
   <data name="GlobalHotkeysCard.Description" xml:space="preserve">
     <value>即使 Painto 未处于前台，也能通过快捷键切换画笔。</value>
@@ -203,6 +212,12 @@
   </data>
   <data name="PenShortcutsCard.Header" xml:space="preserve">
     <value>画笔选择快捷键</value>
+  </data>
+  <data name="RealisticEraserCard.Description" xml:space="preserve">
+    <value>像真实橡皮擦一样擦除线条局部，而非整根删除。</value>
+  </data>
+  <data name="RealisticEraserCard.Header" xml:space="preserve">
+    <value>真实橡皮擦</value>
   </data>
   <data name="RestartDialog.CloseButtonText" xml:space="preserve">
     <value>确定</value>

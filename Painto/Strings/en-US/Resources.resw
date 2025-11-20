@@ -150,6 +150,12 @@
   <data name="EraserModeCard.Header" xml:space="preserve">
     <value>Eraser Mode</value>
   </data>
+  <data name="EraserSizeCard.Description" xml:space="preserve">
+    <value>Adjust the size of the eraser.</value>
+  </data>
+  <data name="EraserSizeCard.Header" xml:space="preserve">
+    <value>Eraser Size</value>
+  </data>
   <data name="ErrorText" xml:space="preserve">
     <value>Error</value>
   </data>
@@ -158,6 +164,9 @@
   </data>
   <data name="FullMonitorCard.Header" xml:space="preserve">
     <value>Full Drawing Area</value>
+  </data>
+  <data name="GeneralHeader.Text" xml:space="preserve">
+    <value>General</value>
   </data>
   <data name="GlobalHotkeysCard.Description" xml:space="preserve">
     <value>Enable global hotkeys to switch pens even when Painto is not focused.</value>
@@ -203,6 +212,12 @@
   </data>
   <data name="PenShortcutsCard.Header" xml:space="preserve">
     <value>Pen Selection Shortcuts</value>
+  </data>
+  <data name="RealisticEraserCard.Description" xml:space="preserve">
+    <value>Erase parts of lines instead of whole strokes.</value>
+  </data>
+  <data name="RealisticEraserCard.Header" xml:space="preserve">
+    <value>Realistic Eraser</value>
   </data>
   <data name="RestartDialog.CloseButtonText" xml:space="preserve">
     <value>OK</value>
