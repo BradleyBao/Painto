@@ -125,6 +125,8 @@ namespace Painto
             LoadSetting();
             InitWindow();
             SourceInitialized();
+            // 强制激活主窗口，确保它站在绘图层之上
+            this.Activate();
             InitPens();
             InitHotkeys();
             //LoadSetting();
