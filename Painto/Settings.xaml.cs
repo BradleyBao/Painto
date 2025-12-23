@@ -270,6 +270,7 @@ namespace Painto
             }
 
             InitHotkeysUI();
+            EraserSizeSlider.ValueChanged += EraserSizeSlider_ValueChanged;
         }
 
         private void InitHotkeysUI()

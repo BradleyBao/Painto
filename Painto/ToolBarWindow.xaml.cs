@@ -111,7 +111,8 @@ namespace Painto
             WinUIEx.HwndExtensions.SetAlwaysOnTop(hwnd, true);
 
             // 初始为穿透模式
-            LockScreen();
+            LockScreen();   //! 必须先锁定，不然会导致视频黑屏
+            UnlockScreen();
 
             // 全屏
             //EnterFullScreenMode();

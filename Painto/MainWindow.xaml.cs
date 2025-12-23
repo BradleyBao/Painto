@@ -186,6 +186,17 @@ namespace Painto
                 ToolBarWindow.IsPixelEraserMode = false; // 默认为整根删除
             }
 
+            // 读取橡皮擦大小
+            string eraserSizeStr = localSettings.Values["EraserSize"] as string;
+            if (!string.IsNullOrEmpty(eraserSizeStr))
+            {
+                ToolBarWindow.EraserSize = double.Parse(eraserSizeStr);
+            }
+            else
+            {
+                ToolBarWindow.EraserSize = 30.0;
+            }
+
         }
 
         private void PenControl_SwitchBackDrawControl(object sender, EventArgs e)
