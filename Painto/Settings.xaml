@@ -92,6 +92,13 @@
                     <ToggleSwitch x:Name="FullMonitorStatus" IsOn="False" />
                 </controls:SettingsCard>
 
+                <InfoBar x:Name="MixedScaleInfoBar"
+                         x:Uid="MixedScaleInfoBar"
+                         Severity="Warning"
+                         IsOpen="False"
+                         IsClosable="True"
+                         Margin="0,4,0,0" />
+
                 <controls:SettingsCard x:Uid="SetMonitorCard"
                                        HeaderIcon="{ui:FontIcon Glyph=&#xE7FA;}"
                                        IsEnabled="True">

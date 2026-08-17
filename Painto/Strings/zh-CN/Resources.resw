@@ -192,6 +192,12 @@
   <data name="ListeningText" xml:space="preserve">
     <value>正在监听... (请按键)</value>
   </data>
+  <data name="MixedScaleInfoBar.Message" xml:space="preserve">
+    <value>您的显示器设置了不同的缩放比例。在缩放比例不同的显示器上，跨屏全屏绘图可能无法正确对齐。建议在 Windows 显示设置中将所有显示器设置为相同的缩放比例，或选择缩放为 100% 的显示器作为主屏幕。</value>
+  </data>
+  <data name="MixedScaleInfoBar.Title" xml:space="preserve">
+    <value>检测到不同的显示器缩放比例</value>
+  </data>
   <data name="ModifierKeyLabel.Text" xml:space="preserve">
     <value>修饰键:</value>
   </data>

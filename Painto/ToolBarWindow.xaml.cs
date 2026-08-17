@@ -94,6 +94,14 @@ namespace Painto
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
+        [DllImport("user32.dll")]
+        private static extern int GetSystemMetrics(int nIndex);
+
+        private const int SM_XVIRTUALSCREEN = 76;
+        private const int SM_YVIRTUALSCREEN = 77;
+        private const int SM_CXVIRTUALSCREEN = 78;
+        private const int SM_CYVIRTUALSCREEN = 79;
+
         internal static IntPtr hwnd;
 
         // 保存 Canvas 引用
@@ -517,25 +525,17 @@ namespace Painto
 
         public void SetFullscreenAcrossAllDisplays()
         {
-            var displays = DisplayArea.FindAll();
+            // AppWindow uses physical screen coordinates. The virtual-screen
+            // metrics remain correct when monitors have different DPI scales.
+            int x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+            int y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+            int width = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+            int height = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 
-            int minX = int.MaxValue, minY = int.MaxValue;
-            int maxX = int.MinValue, maxY = int.MinValue;
-
-            for (int i =0; i < displays.Count; i++)
+            if (width > 0 && height > 0)
             {
-                var display = displays[i];
-                // 改用 OuterBounds (包含任务栏区域)
-                var bounds = display.OuterBounds;
-
-                if (bounds.X < minX) minX = bounds.X;
-                if (bounds.Y < minY) minY = bounds.Y;
-                if (bounds.X + bounds.Width > maxX) maxX = bounds.X + bounds.Width;
-                if (bounds.Y + bounds.Height > maxY) maxY = bounds.Y + bounds.Height;
+                this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
             }
-
-            // 窗口会变成一个跨越所有屏幕的巨大矩形
-            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(minX, minY, maxX - minX, maxY - minY));
         }
 
         private void EnterFullScreenMode()

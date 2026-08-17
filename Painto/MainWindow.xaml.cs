@@ -159,8 +159,13 @@ namespace Painto
             }
             else
             {
-                monitorIndex = 0;
-                localSettings.Values["Monitor"] = "0";
+                // First run: no monitor has been chosen yet, so default to the
+                // one with the lowest DPI scale, since that's the monitor
+                // full-screen mode can render correctly on when scales differ.
+                // Once the user picks a monitor explicitly, their choice is
+                // saved and always honored, regardless of its scale.
+                monitorIndex = Painto.Modules.DisplayScaleHelper.GetLowestScaleMonitorIndex();
+                localSettings.Values["Monitor"] = monitorIndex.ToString();
             }
 
             // Load FullMonitor with error handling

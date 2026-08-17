@@ -80,6 +80,11 @@ namespace Painto
             // Setting 3: Language Related
             InitLanguageUI();
 
+            // Full-screen drawing can't render correctly across monitors with
+            // different DPI scales, so surface a passive warning rather than
+            // overriding whatever monitor the user has configured.
+            MixedScaleInfoBar.IsOpen = Painto.Modules.DisplayScaleHelper.HasMixedScales();
+
             _isUiLoaded = true;
 
         }
@@ -487,6 +492,7 @@ namespace Painto
         {
             int selectedIndex = DisplayGridView.SelectedIndex;
             bool isFullMonitor = FullMonitorStatus.IsOn;
+
             App.m_window.MoveWindowFromMonitor(selectedIndex, isFullMonitor);
             ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
             localSettings.Values["Monitor"] = selectedIndex.ToString();
