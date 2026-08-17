@@ -47,9 +47,9 @@
                 IsColorSliderVisible="True"
                 IsColorChannelTextInputVisible="True"
                 IsHexInputVisible="True"
-                IsAlphaEnabled="True"
-                IsAlphaSliderVisible="True"
-                IsAlphaTextInputVisible="True"
+                IsAlphaEnabled="False"
+                IsAlphaSliderVisible="False"
+                IsAlphaTextInputVisible="False"
                 ColorChanged="ColorPickerforPen_ColorChanged" />
         </Expander>
 
