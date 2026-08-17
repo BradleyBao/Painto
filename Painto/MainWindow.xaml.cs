@@ -47,7 +47,8 @@ namespace Painto
         private uint dpiWindow;
 
         // Child Window - Setting
-        private static Settings _settings;
+        private Settings _settings;
+        private bool _isDisposed = false;
         public int monitorIndex = 0;
         public bool monitorFull = false;
 
@@ -108,6 +109,9 @@ namespace Painto
 
             Init();
 
+            // Register Closed event handler for proper cleanup
+            this.Closed += MainWindow_Closed;
+
             // Create Toolbar 
         }
 
@@ -135,16 +139,23 @@ namespace Painto
 
         private void LoadSetting()
         {
-            // 获取应用程序的本地设置容器
+            // Get application local settings container
             ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
 
-            // 从设置属性中获取MonitorIndex
+            // Load MonitorIndex with error handling
             string MonitorIndex = localSettings.Values["Monitor"] as string;
 
-            // 如果 JSON 字符串存在，则反序列化为 ObservableCollection<PenData> 对象
             if (!string.IsNullOrEmpty(MonitorIndex))
             {
-                monitorIndex = int.Parse(MonitorIndex); 
+                try
+                {
+                    monitorIndex = int.Parse(MonitorIndex);
+                }
+                catch
+                {
+                    monitorIndex = 0;
+                    localSettings.Values["Monitor"] = "0";
+                }
             }
             else
             {
@@ -152,11 +163,19 @@ namespace Painto
                 localSettings.Values["Monitor"] = "0";
             }
 
-            // 设置FullMonitor
+            // Load FullMonitor with error handling
             string IsMonitorFull = localSettings.Values["MonitorFull"] as string;
             if (!string.IsNullOrEmpty(IsMonitorFull))
             {
-                monitorFull = Convert.ToBoolean(int.Parse(IsMonitorFull));
+                try
+                {
+                    monitorFull = Convert.ToBoolean(int.Parse(IsMonitorFull));
+                }
+                catch
+                {
+                    monitorFull = false;
+                    localSettings.Values["MonitorFull"] = "0";
+                }
             }
             else
             {
@@ -164,22 +183,37 @@ namespace Painto
                 localSettings.Values["MonitorFull"] = "0";
             }
 
-            // 设置ToolBar是否自动Collapse
+            // Load ToolBar collapse setting with error handling
             string isToolBarCollapsed = localSettings.Values["IsToolBarCollapse"] as string;
             if (!string.IsNullOrEmpty(isToolBarCollapsed))
             {
-                IsToolBarCollapse = Convert.ToBoolean(int.Parse(isToolBarCollapsed));
+                try
+                {
+                    IsToolBarCollapse = Convert.ToBoolean(int.Parse(isToolBarCollapsed));
+                }
+                catch
+                {
+                    IsToolBarCollapse = false;
+                    localSettings.Values["IsToolBarCollapse"] = "0";
+                }
             } else
             {
                 IsToolBarCollapse = false;
                 localSettings.Values["IsToolBarCollapse"] = "0";
             }
 
-            // 读取橡皮擦模式设置
+            // Load pixel eraser mode setting with error handling
             string isPixelEraser = localSettings.Values["IsPixelEraser"] as string;
             if (!string.IsNullOrEmpty(isPixelEraser))
             {
-                ToolBarWindow.IsPixelEraserMode = bool.Parse(isPixelEraser);
+                try
+                {
+                    ToolBarWindow.IsPixelEraserMode = bool.Parse(isPixelEraser);
+                }
+                catch
+                {
+                    ToolBarWindow.IsPixelEraserMode = false;
+                }
             }
             else
             {
@@ -369,10 +403,47 @@ namespace Painto
         private void SourceInitialized()
         {
             IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            IntPtr toolbarHwnd = WinRT.Interop.WindowNative.GetWindowHandle(_toolbarWindow);
 
-            // Set Ownership
-            SetWindowLong(hwnd, WindowLongFlags.GWL_HWNDPARENT, toolbarHwnd);
+            // Ensure _toolbarWindow is created before getting its handle
+            if (_toolbarWindow != null)
+            {
+                try
+                {
+                    IntPtr toolbarHwnd = WinRT.Interop.WindowNative.GetWindowHandle(_toolbarWindow);
+                    // Set Ownership
+                    SetWindowLong(hwnd, WindowLongFlags.GWL_HWNDPARENT, toolbarHwnd);
+                }
+                catch (Exception)
+                {
+                    // Silently handle if toolbar window isn't ready
+                }
+            }
+        }
+
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            if (_isDisposed) return;
+            _isDisposed = true;
+
+            // Unregister all event handlers to prevent them firing on disposed objects
+            // This is CRITICAL to prevent STOWED_EXCEPTION_80004003
+            try
+            {
+                if (penControl != null)
+                {
+                    penControl.DisableWindowControl -= DisableToolBarControl;
+                    penControl.SaveData -= PenControl_SaveData;
+                    penControl.SwitchBackDrawControl -= PenControl_SwitchBackDrawControl;
+                }
+                if (ControlPanel != null)
+                {
+                    ControlPanel.LayoutUpdated -= ControlPanel_LayoutUpdated;
+                }
+            }
+            catch { }
+
+            // Perform any additional cleanup that was in CleanupNativeHooks
+            // If CleanupNativeHooks exists elsewhere, you can call it here
         }
 
         private Microsoft.UI.Windowing.AppWindow GetAppWindowForCurrentWindow()
