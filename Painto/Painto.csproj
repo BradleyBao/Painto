@@ -30,7 +30,6 @@
     <AppxPackageDir>D:\Workspace\OuputEXE\</AppxPackageDir>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="CustomizePenWindow.xaml" />
     <None Remove="PenControl.xaml" />
     <None Remove="Settings.xaml" />
   </ItemGroup>
@@ -64,11 +63,6 @@
   </ItemGroup>
   <ItemGroup>
     <Page Update="Settings.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Update="CustomizePenWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

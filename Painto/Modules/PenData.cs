@@ -15,5 +15,7 @@ namespace Painto.Modules
         public string penType { get; set; }
         public string Icon { get; set; }
         public string PenColorString;
+        public double Opacity { get; set; } = 1.0;
+        public string Name { get; set; }
     }
 }

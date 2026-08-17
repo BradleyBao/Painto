@@ -37,6 +37,7 @@ namespace Painto
         // 笔刷属性 (静态变量供外部修改)
         public static Color penColor = Colors.Black;
         public static int penThickness = 5;
+        public static double penOpacity = 1.0;
 
         // 控制橡皮擦模式
         // true = 真实擦除 (Pixel Eraser), false = 整根擦除 (Object Eraser)
@@ -212,9 +213,10 @@ namespace Painto
             }
             else
             {
+                byte effectiveAlpha = (byte)(penColor.A * Math.Clamp(penOpacity, 0.0, 1.0));
                 _currentStroke = new Stroke
                 {
-                    Color = penColor,
+                    Color = Color.FromArgb(effectiveAlpha, penColor.R, penColor.G, penColor.B),
                     Size = (float)penThickness
                 };
                 _currentStroke.Points.Add(vecPt);

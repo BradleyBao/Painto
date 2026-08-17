@@ -11,10 +11,29 @@
 
     <UserControl.Resources>
         <DataTemplate x:Key="PenToolTemplate" x:DataType="localcp:PenData">
-            <ItemContainer HorizontalAlignment="Center" Width="Auto" AutomationProperties.Name="{x:Bind penType}">
+            <ItemContainer HorizontalAlignment="Center" Width="Auto" AutomationProperties.Name="{x:Bind penType}" ToolTipService.ToolTip="{x:Bind Name}">
                 <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="{x:Bind Icon}" Foreground="{x:Bind PenColorString}"/>
             </ItemContainer>
         </DataTemplate>
+
+        <Style x:Key="PenEditFlyoutPresenterStyle" TargetType="FlyoutPresenter">
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}"/>
+        </Style>
+
+        <!--
+            ShouldConstrainToRootBounds="False" is required here: the toolbar window this
+            control lives in is tiny (just tall enough for the pen row), so a normal flyout
+            would be squeezed into that window's bounds. Setting this makes the flyout render
+            in its own top-level surface so it can float freely above the toolbar instead.
+        -->
+        <Flyout x:Name="PenEditFlyout" Placement="Top" ShouldConstrainToRootBounds="False"
+                FlyoutPresenterStyle="{StaticResource PenEditFlyoutPresenterStyle}" Closed="PenEditFlyout_Closed">
+            <local:PenEditFlyoutContent x:Name="PenEditContent" Applied="PenEditContent_Applied" Cancelled="PenEditContent_Cancelled"/>
+        </Flyout>
     </UserControl.Resources>
 
     <GridView x:Name="PenItemList" IsItemClickEnabled="True"

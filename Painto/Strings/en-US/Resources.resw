@@ -204,8 +204,23 @@
   <data name="MonitorListCard.Header" xml:space="preserve">
     <value>List of Monitors</value>
   </data>
+  <data name="MoreColorsExpander.Header" xml:space="preserve">
+    <value>More colors</value>
+  </data>
   <data name="NoneText" xml:space="preserve">
     <value>None</value>
+  </data>
+  <data name="OpacityHeader.Header" xml:space="preserve">
+    <value>Opacity</value>
+  </data>
+  <data name="PenNameBox.Header" xml:space="preserve">
+    <value>Pen name</value>
+  </data>
+  <data name="PenNameBox.PlaceholderText" xml:space="preserve">
+    <value>e.g. Highlighter</value>
+  </data>
+  <data name="PreviewLabel.Text" xml:space="preserve">
+    <value>Preview</value>
   </data>
   <data name="PenShortcutsCard.Description" xml:space="preserve">
     <value>Automatically assigns [Modifier] + 1, 2, 3... based on your pen list.</value>
