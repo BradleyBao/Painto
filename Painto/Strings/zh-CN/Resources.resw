@@ -204,8 +204,23 @@
   <data name="MonitorListCard.Header" xml:space="preserve">
     <value>显示器列表</value>
   </data>
+  <data name="MoreColorsExpander.Header" xml:space="preserve">
+    <value>更多颜色</value>
+  </data>
   <data name="NoneText" xml:space="preserve">
     <value>无</value>
+  </data>
+  <data name="OpacityHeader.Header" xml:space="preserve">
+    <value>不透明度</value>
+  </data>
+  <data name="PenNameBox.Header" xml:space="preserve">
+    <value>画笔名称</value>
+  </data>
+  <data name="PenNameBox.PlaceholderText" xml:space="preserve">
+    <value>例如：荧光笔</value>
+  </data>
+  <data name="PreviewLabel.Text" xml:space="preserve">
+    <value>预览</value>
   </data>
   <data name="PenShortcutsCard.Description" xml:space="preserve">
     <value>根据画笔列表自动分配 [修饰键] + 1, 2, 3...</value>

@@ -1,0 +1,80 @@
+<UserControl
+    x:Class="Painto.PenEditFlyoutContent"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Painto"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel Width="320" Spacing="16">
+
+        <TextBox x:Name="PenNameBox"
+                 x:Uid="PenNameBox"
+                 TextChanged="PenNameBox_TextChanged" />
+
+        <StackPanel Spacing="6">
+            <TextBlock x:Uid="PreviewLabel" Text="Preview" Style="{ThemeResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            <Border x:Name="PreviewBorder"
+                    Height="56"
+                    CornerRadius="8"
+                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+                <Line x:Name="PreviewLine"
+                      X1="16" Y1="28" X2="284" Y2="28"
+                      StrokeStartLineCap="Round"
+                      StrokeEndLineCap="Round" />
+            </Border>
+        </StackPanel>
+
+        <StackPanel x:Name="SwatchPanel" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FF000000" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FFFFFFFF" BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FFEB3B4A" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FF1E73C7" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FF2FB344" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FFF2A600" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FF9C27B0" Tapped="Swatch_Tapped"/>
+            <Border Width="30" Height="30" CornerRadius="15" Background="#FF00BCD4" Tapped="Swatch_Tapped"/>
+        </StackPanel>
+
+        <Expander Header="More colors" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" x:Uid="MoreColorsExpander">
+            <ColorPicker
+                x:Name="ColorPickerforPen"
+                ColorSpectrumShape="Box"
+                IsMoreButtonVisible="True"
+                IsColorSliderVisible="True"
+                IsColorChannelTextInputVisible="True"
+                IsHexInputVisible="True"
+                IsAlphaEnabled="True"
+                IsAlphaSliderVisible="True"
+                IsAlphaTextInputVisible="True"
+                ColorChanged="ColorPickerforPen_ColorChanged" />
+        </Expander>
+
+        <Slider x:Name="ThicknessAdjuster"
+                x:Uid="ThicknessHeader"
+                Minimum="1"
+                Maximum="10"
+                Value="5"
+                TickFrequency="1"
+                Header="Thickness"
+                ValueChanged="ThicknessAdjuster_ValueChanged" />
+
+        <Slider x:Name="OpacityAdjuster"
+                x:Uid="OpacityHeader"
+                Minimum="10"
+                Maximum="100"
+                Value="100"
+                TickFrequency="10"
+                Header="Opacity"
+                ValueChanged="OpacityAdjuster_ValueChanged" />
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+            <Button x:Name="CancelButton" x:Uid="CancelBtn" Content="Cancel" Style="{ThemeResource DefaultButtonStyle}" Click="CancelButton_Click"/>
+            <Button x:Name="ApplyButton" x:Uid="ApplyBtn" Content="Apply" Style="{ThemeResource AccentButtonStyle}" Click="ApplyButton_Click"/>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>

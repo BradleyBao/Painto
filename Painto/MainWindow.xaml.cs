@@ -540,15 +540,16 @@ namespace Painto
                 // Default Value
                 PenItems = new ObservableCollection<PenData>
                 {
-                    new PenData { PenColor = Colors.Black, Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Colors.Black.ToString()},
-                    new PenData { PenColor = Color.FromArgb(255,30,115,199), Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Color.FromArgb(255,30,115,199).ToString()},
-                    new PenData { PenColor = Color.FromArgb(255,235,59,74), Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Color.FromArgb(255,235,59,74).ToString()}
+                    new PenData { PenColor = Colors.Black, Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Colors.Black.ToString(), Opacity = 1.0, Name = "Pen 1"},
+                    new PenData { PenColor = Color.FromArgb(255,30,115,199), Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Color.FromArgb(255,30,115,199).ToString(), Opacity = 1.0, Name = "Pen 2"},
+                    new PenData { PenColor = Color.FromArgb(255,235,59,74), Thickness = 5, penType = "Normal", Icon = "\uEE56", PenColorString = Color.FromArgb(255,235,59,74).ToString(), Opacity = 1.0, Name = "Pen 3"}
                 };
             }
 
             penControl.ItemsSource = PenItems;
             ToolBarWindow.penColor = PenItems[0].PenColor;
             ToolBarWindow.penThickness = PenItems[0].Thickness;
+            ToolBarWindow.penOpacity = PenItems[0].Opacity;
             SavePenItems(PenItems);
         }
 
@@ -576,6 +577,11 @@ namespace Painto
             if (!string.IsNullOrEmpty(penItemsJson))
             {
                 var penItems = JsonConvert.DeserializeObject<ObservableCollection<PenData>>(penItemsJson);
+                for (int i = 0; i < penItems.Count; i++)
+                {
+                    if (penItems[i].Opacity <= 0) penItems[i].Opacity = 1.0;
+                    if (string.IsNullOrEmpty(penItems[i].Name)) penItems[i].Name = "Pen " + (i + 1);
+                }
                 return penItems;
             }
 
@@ -607,7 +613,9 @@ namespace Painto
                 Thickness = 5,
                 penType = "Normal",
                 Icon = "\uEE56",
-                PenColorString = Colors.Black.ToString()
+                PenColorString = Colors.Black.ToString(),
+                Opacity = 1.0,
+                Name = "Pen " + (PenItems.Count + 1)
             };
 
             PenItems.Add(new_penData);
