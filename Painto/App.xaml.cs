@@ -42,11 +42,14 @@ namespace Painto
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow();
             // 设置 DPI 感知
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(m_window);
             var dpiAwarenessContext = DPI_AWARENESS_CONTEXT.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2;
             SetThreadDpiAwarenessContext(dpiAwarenessContext);
+
+            // Set the thread context before creating any WinUI windows. Window
+            // coordinates and XamlRoot scaling otherwise use the previous DPI
+            // context when the primary monitor uses a non-100% scale.
+            m_window = new MainWindow();
             m_window.Activate();
         }
 

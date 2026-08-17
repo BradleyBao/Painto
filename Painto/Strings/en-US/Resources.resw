@@ -192,6 +192,12 @@
   <data name="ListeningText" xml:space="preserve">
     <value>Listening... (Press Keys)</value>
   </data>
+  <data name="MixedScaleInfoBar.Message" xml:space="preserve">
+    <value>Your monitors are set to different display scales. Full-screen drawing across all displays may not line up correctly on monitors with a different scale. For best results, set all monitors to the same scale in Windows Display Settings, or pick the monitor set to 100% as your main screen.</value>
+  </data>
+  <data name="MixedScaleInfoBar.Title" xml:space="preserve">
+    <value>Mixed Display Scales Detected</value>
+  </data>
   <data name="ModifierKeyLabel.Text" xml:space="preserve">
     <value>Modifier Key:</value>
   </data>
