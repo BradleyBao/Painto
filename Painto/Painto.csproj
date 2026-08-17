@@ -16,7 +16,7 @@
     <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <PackageCertificateThumbprint>BAA2EA4F8E6B93AD51A28308717F9B348FCAC6B7</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>BB7A98EC15CF2BA6C943BE6943D1EB44D045915C</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
@@ -27,7 +27,7 @@
 	  <PlatformTarget Condition="'$(Platform)' == 'x64'">x64</PlatformTarget>
 	  <PlatformTarget Condition="'$(Platform)' == 'x86'">x86</PlatformTarget>
 	  <PlatformTarget Condition="'$(Platform)' == 'ARM64'">ARM64</PlatformTarget>
-    <AppxPackageDir>D:\Workspace\OuputEXE\</AppxPackageDir>
+    <AppxPackageDir>C:\Users\17765\Documents\OutputEXE\</AppxPackageDir>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="PenControl.xaml" />

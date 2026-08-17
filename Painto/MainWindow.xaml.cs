@@ -342,8 +342,11 @@ namespace Painto
             DisplayArea display = displays[monitorIndex];
             var workArea = display.WorkArea;
 
-            // DPI Scale 
-            double dpiScale = Content.XamlRoot != null ? Content.XamlRoot.RasterizationScale : 1.0;
+            // DPI Scale — query the target monitor directly rather than the
+            // window's current XamlRoot, since that still reflects whichever
+            // monitor the window was on before this move (stale scale when
+            // moving across monitors with different DPI).
+            double dpiScale = Painto.Modules.DisplayScaleHelper.GetScale(display);
 
             // 额外20像素，防止右侧图标渲染误差被切掉
             int controlPanelWidth = (int)((ControlPanel.ActualWidth + 20) * dpiScale);

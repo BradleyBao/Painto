@@ -513,6 +513,19 @@ namespace Painto
             MyCanvas.Invalidate();
         }
 
+        // When a single MoveAndResize call both relocates the window to a
+        // different monitor AND changes its size, a transient DPI change
+        // mid-call can leave the window only partially applied — remnants of
+        // the old, larger bounds stay visible on the monitor it left until
+        // something forces another pass (e.g. clicking "Set" again). Once
+        // the window has actually landed on the target monitor, a second,
+        // identical call has nothing left to transition and settles cleanly.
+        private void MoveAndResizeSettled(Windows.Graphics.RectInt32 rect)
+        {
+            this.AppWindow.MoveAndResize(rect);
+            this.AppWindow.MoveAndResize(rect);
+        }
+
         public void MoveViaMonitor(int indexMonitor)
         {
             var displays = DisplayArea.FindAll();
@@ -520,7 +533,7 @@ namespace Painto
 
             DisplayArea display = displays[indexMonitor];
             var area = display.WorkArea;
-            this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(area.X, area.Y, area.Width, area.Height));
+            MoveAndResizeSettled(new Windows.Graphics.RectInt32(area.X, area.Y, area.Width, area.Height));
         }
 
         public void SetFullscreenAcrossAllDisplays()
@@ -534,7 +547,7 @@ namespace Painto
 
             if (width > 0 && height > 0)
             {
-                this.AppWindow.MoveAndResize(new Windows.Graphics.RectInt32(x, y, width, height));
+                MoveAndResizeSettled(new Windows.Graphics.RectInt32(x, y, width, height));
             }
         }
 
