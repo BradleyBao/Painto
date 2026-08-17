@@ -32,6 +32,7 @@ namespace Painto
         // 状态变量
         public static bool _isEraserMode = false;
         public static bool _computerMode = false;
+        private static bool _isWindowDisposed = false;
 
         // 笔刷属性 (静态变量供外部修改)
         public static Color penColor = Colors.Black;
@@ -100,6 +101,7 @@ namespace Painto
         public ToolBarWindow()
         {
             this.InitializeComponent();
+            _isWindowDisposed = false;
             hwnd = WindowNative.GetWindowHandle(this);
             _canvasRef = MyCanvas; // 获取引用
 
@@ -114,6 +116,14 @@ namespace Painto
             LockScreen();   //! 必须先锁定，不然会导致视频黑屏
             UnlockScreen();
 
+            // Register cleanup on window close
+            this.Closed += (s, e) =>
+            {
+                _isWindowDisposed = true;
+                hwnd = IntPtr.Zero;
+                _canvasRef = null;
+            };
+
             // 全屏
             //EnterFullScreenMode();
         }
@@ -122,31 +132,51 @@ namespace Painto
 
         public static void UnlockScreen()
         {
-            // ! 画图模式
-            // 移除 WS_EX_TRANSPARENT -> 鼠标拦截 (画图)
-            long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
-            SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle & ~WS_EX_TRANSPARENT));
+            // Check if window is disposed or invalid
+            if (_isWindowDisposed || hwnd == IntPtr.Zero) return;
 
-            // 强制刷新窗口框架，确保样式立即生效
-            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            try
+            {
+                // ! 画图模式
+                // 移除 WS_EX_TRANSPARENT -> 鼠标拦截 (画图)
+                long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
+                SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle & ~WS_EX_TRANSPARENT));
 
-            // 开启 Canvas 命中测试
-            if (_canvasRef != null) _canvasRef.IsHitTestVisible = true;
+                // 强制刷新窗口框架，确保样式立即生效
+                SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+                // 开启 Canvas 命中测试
+                if (_canvasRef != null) _canvasRef.IsHitTestVisible = true;
+            }
+            catch
+            {
+                // Silently ignore P/Invoke errors on disposed window
+            }
         }
 
         public static void LockScreen()
         {
-            // ! 桌面模式
-            // 添加 WS_EX_TRANSPARENT -> 鼠标穿透 (桌面)
-            // 确保 WS_EX_LAYERED 存在
-            long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
-            SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED));
+            // Check if window is disposed or invalid
+            if (_isWindowDisposed || hwnd == IntPtr.Zero) return;
 
-            // 强制刷新窗口框架
-            SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            try
+            {
+                // ! 桌面模式
+                // 添加 WS_EX_TRANSPARENT -> 鼠标穿透 (桌面)
+                // 确保 WS_EX_LAYERED 存在
+                long extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE).ToInt64();
+                SetWindowLong(hwnd, GWL_EXSTYLE, (IntPtr)(extendedStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED));
 
-            // 禁用 Canvas 命中测试，防止 Win2D 抢占输入
-            if (_canvasRef != null) _canvasRef.IsHitTestVisible = false;
+                // 强制刷新窗口框架
+                SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+                // 禁用 Canvas 命中测试，防止 Win2D 抢占输入
+                if (_canvasRef != null) _canvasRef.IsHitTestVisible = false;
+            }
+            catch
+            {
+                // Silently ignore P/Invoke errors on disposed window
+            }
         }
 
         // Win2D 绘图逻辑

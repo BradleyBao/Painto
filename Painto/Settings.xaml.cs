@@ -182,12 +182,28 @@ namespace Painto
             // 获取应用程序的本地设置容器
             ApplicationDataContainer localSettings = ApplicationData.Current.LocalSettings;
 
-            // 从设置属性中获取MonitorIndex
+            // 从设置属性中获取MonitorIndex with error handling
             string MonitorIndex = localSettings.Values["Monitor"] as string;
-            int monitorIndex = int.Parse(MonitorIndex);
+            int monitorIndex = 0;
+            try
+            {
+                monitorIndex = int.Parse(MonitorIndex ?? "0");
+            }
+            catch
+            {
+                monitorIndex = 0;
+            }
 
             string MonitorFull = localSettings.Values["MonitorFull"] as string;
-            int monitorFull = int.Parse(MonitorFull);
+            int monitorFull = 0;
+            try
+            {
+                monitorFull = int.Parse(MonitorFull ?? "0");
+            }
+            catch
+            {
+                monitorFull = 0;
+            }
             bool _monitorFull = monitorFull != 0;
 
             for (int i = 0; i < displays.Count; i++) 
