@@ -12,6 +12,7 @@
 	  <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <PublishProfile>win-$(Platform).pubxml</PublishProfile>
     <UseWinUI>true</UseWinUI>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <EnableMsixTooling>true</EnableMsixTooling>
     <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
@@ -28,6 +29,7 @@
 	  <PlatformTarget Condition="'$(Platform)' == 'x86'">x86</PlatformTarget>
 	  <PlatformTarget Condition="'$(Platform)' == 'ARM64'">ARM64</PlatformTarget>
     <AppxPackageDir>C:\Users\17765\Documents\OutputEXE\</AppxPackageDir>
+	  <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>	  
   </PropertyGroup>
   <ItemGroup>
     <None Remove="PenControl.xaml" />

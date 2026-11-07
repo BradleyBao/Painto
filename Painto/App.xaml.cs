@@ -34,6 +34,13 @@ namespace Painto
         public App()
         {
             this.InitializeComponent();
+
+            // AppInstance raises redirected activation on a background thread.
+            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            Microsoft.Windows.AppLifecycle.AppInstance.GetCurrent().Activated += (sender, args) =>
+            {
+                dispatcher.TryEnqueue(FocusMainWindow);
+            };
         }
 
         /// <summary>
@@ -52,6 +59,34 @@ namespace Painto
             m_window = new MainWindow();
             m_window.Activate();
         }
+
+        private static void FocusMainWindow()
+        {
+            // If activation arrives during startup, OnLaunched will focus the
+            // window once its initialization has finished.
+            if (m_window == null) return;
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(m_window);
+            if (IsIconic(hwnd))
+            {
+                ShowWindow(hwnd, 9); // SW_RESTORE
+            }
+
+            m_window.Activate();
+            SetForegroundWindow(hwnd);
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsIconic(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool ShowWindow(IntPtr hwnd, int command);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hwnd);
 
         [DllImport("User32.dll")]
         static extern DPI_AWARENESS_CONTEXT SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT dpiContext);
